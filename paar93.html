@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paar-Gegenstände-Duell</title>
+    <style>
+        :root {
+            --primary-color: #0056b3;
+            --success-color: #28a745;
+            --error-color: #dc3545;
+            --bg-color: #f8f9fa;
+            --text-color: #333;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+
+        .instruction {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            font-size: 0.95rem;
+            border: 1px solid #ddd;
+            line-height: 1.4;
+        }
+
+        .word-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .word-card {
+            background: white;
+            border: 2px solid #dee2e6;
+            border-radius: 12px;
+            padding: 20px 10px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 60px;
+        }
+
+        @media (hover: hover) {
+            .word-card:hover:not(.correct):not(.is-over) {
+                border-color: var(--primary-color);
+                transform: translateY(-2px);
+            }
+        }
+
+        .word-card.correct {
+            background-color: var(--success-color);
+            border-color: var(--success-color);
+            color: white;
+            cursor: default;
+        }
+
+        .word-card.wrong {
+            background-color: var(--error-color);
+            border-color: var(--error-color);
+            color: white;
+            animation: shake 0.4s ease;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .status-msg {
+            margin-top: 10px;
+            font-weight: bold;
+            min-height: 24px;
+            font-size: 1.1rem;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1rem;
+            transition: opacity 0.2s;
+        }
+
+        .solution-btn { background-color: #ffc107; color: #212529; }
+        .reset-btn { background-color: #6c757d; color: white; }
+
+        @media (max-width: 480px) {
+            .word-grid { grid-template-columns: 1fr 1fr; }
+            h1 { font-size: 1.3rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Paar-Gegenstände-Duell</h1>
+        
+        <p class="instruction">
+            Wähle alle Gegenstände aus, bei denen <strong>sowohl</strong> Sammelzahlwörter als auch Kardinalzahlen erlaubt sind (z. B. двое носков / два носка). <br>
+            Klicke die Wörter direkt an!
+        </p>
+
+        <div class="word-grid" id="wordGrid">
+            <!-- Karten werden per JS eingefügt -->
+        </div>
+
+        <div id="status-msg" class="status-msg"></div>
+
+        <div class="controls">
+            <button class="solution-btn" onclick="showSolution()">Lösung zeigen</button>
+            <button class="reset-btn" onclick="initGame()">Neu starten</button>
+        </div>
+    </div>
+
+    <script>
+        // Daten für die Übung (8 Einträge)
+        // bothAllowed: true bedeutet, es ist ein Paar-Gegenstand (beide Zahlarten möglich)
+        const items = [
+            { text: "перчатки", bothAllowed: true }, // Handschuhe (beide erlaubt)
+            { text: "брюки", bothAllowed: false },    // Hose (nur Sammelzahlwort)
+            { text: "носки", bothAllowed: true },    // Socken (beide erlaubt)
+            { text: "ножницы", bothAllowed: false },  // Schere (nur Sammelzahlwort)
+            { text: "сапоги", bothAllowed: true },   // Stiefel (beide erlaubt)
+            { text: "яблоки", bothAllowed: false },   // Äpfel (nur Kardinalzahl)
+            { text: "лыжи", bothAllowed: true },     // Ski (beide erlaubt)
+            { text: "книги", bothAllowed: false }    // Bücher (nur Kardinalzahl)
+        ];
+
+        let correctFound = 0;
+        const totalCorrect = items.filter(i => i.bothAllowed).length;
+        let isGameOver = false;
+
+        function shuffle(array) {
+            return array.sort(() => Math.random() - 0.5);
+        }
+
+        function initGame() {
+            const grid = document.getElementById('wordGrid');
+            const msg = document.getElementById('status-msg');
+            grid.innerHTML = '';
+            msg.textContent = '';
+            msg.style.color = 'inherit';
+            correctFound = 0;
+            isGameOver = false;
+
+            shuffle([...items]).forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'word-card';
+                card.textContent = item.text;
+                card.dataset.both = item.bothAllowed;
+                card.onclick = () => handleSelection(card);
+                grid.appendChild(card);
+            });
+        }
+
+        function handleSelection(card) {
+            if (isGameOver || card.classList.contains('correct')) return;
+
+            const bothAllowed = card.dataset.both === "true";
+
+            if (bothAllowed) {
+                card.classList.add('correct');
+                correctFound++;
+                if (correctFound === totalCorrect) {
+                    winGame();
+                }
+            } else {
+                card.classList.add('wrong');
+                setTimeout(() => card.classList.remove('wrong'), 800);
+            }
+        }
+
+        function winGame() {
+            isGameOver = true;
+            const msg = document.getElementById('status-msg');
+            msg.textContent = "Отлично! Alle Paar-Gegenstände wurden gefunden.";
+            msg.style.color = "var(--success-color)";
+            document.querySelectorAll('.word-card').forEach(c => c.classList.add('is-over'));
+        }
+
+        function showSolution() {
+            if (isGameOver) return;
+            const cards = document.querySelectorAll('.word-card');
+            cards.forEach(card => {
+                if (card.dataset.both === "true") {
+                    card.classList.add('correct');
+                }
+            });
+            isGameOver = true;
+            const msg = document.getElementById('status-msg');
+            msg.textContent = "Lösung: перчатки, носки, сапоги, лыжи sind Paar-Gegenstände.";
+            msg.style.color = "#333";
+        }
+
+        // Spiel starten
+        initGame();
+    </script>
+</body>
+</html>
