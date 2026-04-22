@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kategorien-Sortierung: Sammelzahlwörter</title>
+    <style>
+        :root {
+            --primary-color: #0056b3;
+            --success-color: #28a745;
+            --error-color: #dc3545;
+            --bg-color: #f4f7f9;
+            --card-bg: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            text-align: center;
+        }
+
+        h1 { font-size: 1.5rem; color: #333; margin-bottom: 10px; }
+
+        .instruction {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            font-size: 0.9rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        /* Aktuelle Karte */
+        .card-zone {
+            perspective: 1000px;
+            height: 120px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .word-card {
+            background: var(--card-bg);
+            width: 200px;
+            padding: 30px;
+            border-radius: 15px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            border: 2px solid var(--primary-color);
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+
+        /* Die Körbe / Schaltflächen */
+        .basket-zone {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .basket {
+            background: white;
+            border: 3px dashed #ccc;
+            border-radius: 15px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .basket:hover {
+            border-color: var(--primary-color);
+            background-color: #f0f7ff;
+        }
+
+        .basket h3 {
+            margin: 0;
+            font-size: 1rem;
+            pointer-events: none;
+        }
+
+        .basket.possible { border-color: var(--success-color); }
+        .basket.impossible { border-color: #999; }
+
+        /* Animationen bei Klick */
+        .correct-flash { background-color: #d4edda !important; border-color: var(--success-color) !important; }
+        .error-flash { background-color: #f8d7da !important; border-color: var(--error-color) !important; animation: shake 0.4s ease; }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        /* Listen der sortierten Wörter */
+        .results-lists {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .res-list {
+            text-align: left;
+            background: rgba(255,255,255,0.5);
+            padding: 10px;
+            border-radius: 8px;
+            min-height: 50px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #ddd;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        #progress-fill {
+            height: 100%;
+            background: var(--success-color);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .reset-btn {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        /* Mobile Anpassungen */
+        @media (max-width: 500px) {
+            .basket-zone { grid-template-columns: 1fr; }
+            .results-lists { grid-template-columns: 1fr; }
+            .word-card { width: 160px; font-size: 1.2rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Übung 4: Ausschluss-Prinzip</h1>
+    
+    <p class="instruction">
+        Entscheide für jedes Wort: Ist die Verwendung eines <strong>Sammelzahlworts</strong> (двое, трое...) möglich oder muss eine <strong>Kardinalzahl</strong> (два, три...) verwendet werden?
+    </p>
+
+    <div class="progress-bar"><div id="progress-fill"></div></div>
+
+    <div class="card-zone">
+        <div id="current-card" class="word-card">Wort</div>
+    </div>
+
+    <div class="basket-zone">
+        <div class="basket possible" onclick="handleChoice(true)">
+            <h3>✅ Sammelzahl möglich</h3>
+            <small>(z.B. двое студентов)</small>
+        </div>
+        <div class="basket impossible" onclick="handleChoice(false)">
+            <h3>🚫 Nur Kardinalzahl</h3>
+            <small>(z.B. две студентки)</small>
+        </div>
+    </div>
+
+    <div class="results-lists">
+        <div id="list-possible" class="res-list">Möglich: </div>
+        <div id="list-impossible" class="res-list">Nur Kardinal: </div>
+    </div>
+
+    <button class="reset-btn" onclick="initGame()">Neu starten</button>
+</div>
+
+<script>
+    const allItems = [
+        { w: "студенты", p: true },  // Masc animate
+        { w: "студентки", p: false }, // Fem
+        { w: "яблоки", p: false },    // Neuter
+        { w: "дети", p: true },       // Special word
+        { w: "ножницы", p: true },    // Pluralia tantum
+        { w: "котята", p: true },     // Animal young
+        { w: "стулья", p: false },    // Masc inanimate
+        { w: "окна", p: false },      // Neuter
+        { w: "друзья", p: true },     // Masc animate
+        { w: "машины", p: false },    // Fem
+        { w: "брюки", p: true },      // Pluralia tantum
+        { w: "перчатки", p: true }    // Pair items
+    ];
+
+    let deck = [];
+    let currentIndex = 0;
+
+    function shuffle(array) {
+        return array.sort(() => Math.random() - 0.5);
+    }
+
+    function initGame() {
+        deck = shuffle([...allItems]);
+        currentIndex = 0;
+        document.getElementById('list-possible').innerHTML = "<b>Möglich:</b> ";
+        document.getElementById('list-impossible').innerHTML = "<b>Nur Kardinal:</b> ";
+        updateUI();
+    }
+
+    function updateUI() {
+        const progress = (currentIndex / deck.length) * 100;
+        document.getElementById('progress-fill').style.width = progress + "%";
+
+        if (currentIndex < deck.length) {
+            document.getElementById('current-card').textContent = deck[currentIndex].w;
+            document.getElementById('current-card').style.opacity = "1";
+            document.getElementById('current-card').style.transform = "scale(1)";
+        } else {
+            document.getElementById('current-card').textContent = "Fertig! 🎉";
+            document.getElementById('current-card').style.borderColor = "var(--success-color)";
+        }
+    }
+
+    function handleChoice(chosenPossible) {
+        if (currentIndex >= deck.length) return;
+
+        const item = deck[currentIndex];
+        const isCorrect = (chosenPossible === item.p);
+        const baskets = document.querySelectorAll('.basket');
+        const targetBasket = chosenPossible ? baskets[0] : baskets[1];
+
+        if (isCorrect) {
+            targetBasket.classList.add('correct-flash');
+            setTimeout(() => targetBasket.classList.remove('correct-flash'), 400);
+            
+            // In die Liste unten eintragen
+            const listId = chosenPossible ? 'list-possible' : 'list-impossible';
+            document.getElementById(listId).innerHTML += item.w + ", ";
+            
+            currentIndex++;
+            updateUI();
+        } else {
+            targetBasket.classList.add('error-flash');
+            setTimeout(() => targetBasket.classList.remove('error-flash'), 400);
+        }
+    }
+
+    initGame();
+</script>
+
+</body>
+</html>
