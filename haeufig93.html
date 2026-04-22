@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Häufigkeits-Check: Direktes Feedback</title>
+    <style>
+        :root {
+            --primary-color: #0056b3;
+            --success-color: #28a745;
+            --error-color: #dc3545;
+            --bg-color: #f8f9fa;
+            --text-color: #333;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            color: var(--primary-color);
+        }
+
+        p.instruction {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            border: 1px solid #ddd;
+            margin-bottom: 25px;
+        }
+
+        .word-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 12px;
+            margin-bottom: 30px;
+        }
+
+        .word-card {
+            background: white;
+            border: 2px solid #dee2e6;
+            border-radius: 10px;
+            padding: 18px 5px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+
+        /* Feedback-Farben */
+        .word-card.correct {
+            background-color: var(--success-color);
+            border-color: var(--success-color);
+            color: white;
+            cursor: default;
+        }
+
+        .word-card.wrong {
+            background-color: var(--error-color);
+            border-color: var(--error-color);
+            color: white;
+            animation: shake 0.3s ease;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-4px); }
+            75% { transform: translateX(4px); }
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 10px;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        .solution-btn { background-color: #ffc107; color: #333; }
+        .reset-btn { background-color: #6c757d; color: white; }
+
+        #status-msg {
+            margin-top: 20px;
+            font-weight: bold;
+            height: 24px;
+        }
+
+        @media (max-width: 400px) {
+            .word-grid { grid-template-columns: 1fr 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Häufigkeits-Check</h1>
+        <p class="instruction">
+            Klicke die <strong>3 Sammelzahlwörter</strong> an, die im modernen Russisch selten sind. <br>
+            Du erhältst sofort Feedback!
+        </p>
+
+        <div class="word-grid" id="wordGrid"></div>
+
+        <div id="status-msg"></div>
+
+        <div class="controls">
+            <button class="solution-btn" onclick="showSolution()">Lösung zeigen</button>
+            <button class="reset-btn" onclick="initGame()">Neu starten</button>
+        </div>
+    </div>
+
+    <script>
+        const words = [
+            { text: "двое", rare: false },
+            { text: "трое", rare: false },
+            { text: "четверо", rare: false },
+            { text: "пятеро", rare: false },
+            { text: "шестеро", rare: false },
+            { text: "семеро", rare: false },
+            { text: "восьмеро", rare: true },
+            { text: "девятеро", rare: true },
+            { text: "десятеро", rare: true }
+        ];
+
+        let foundRare = 0;
+        let isGameOver = false;
+
+        function shuffle(array) {
+            return array.sort(() => Math.random() - 0.5);
+        }
+
+        function initGame() {
+            const grid = document.getElementById('wordGrid');
+            const msg = document.getElementById('status-msg');
+            grid.innerHTML = '';
+            msg.textContent = '';
+            foundRare = 0;
+            isGameOver = false;
+
+            shuffle([...words]).forEach(w => {
+                const card = document.createElement('div');
+                card.className = 'word-card';
+                card.textContent = w.text;
+                card.dataset.rare = w.rare;
+                card.onclick = () => handleSelection(card);
+                grid.appendChild(card);
+            });
+        }
+
+        function handleSelection(card) {
+            if (isGameOver || card.classList.contains('correct')) return;
+
+            const isRare = card.dataset.rare === "true";
+
+            if (isRare) {
+                card.classList.add('correct');
+                foundRare++;
+                if (foundRare === 3) {
+                    winGame();
+                }
+            } else {
+                card.classList.add('wrong');
+                // Kurz zeigen, dass es falsch war, dann zurücksetzen (optional)
+                setTimeout(() => card.classList.remove('wrong'), 800);
+            }
+        }
+
+        function winGame() {
+            isGameOver = true;
+            const msg = document.getElementById('status-msg');
+            msg.textContent = "Отлично! Alle 3 seltenen Formen gefunden.";
+            msg.style.color = "var(--success-color)";
+        }
+
+        function showSolution() {
+            if (isGameOver) return;
+            
+            const cards = document.querySelectorAll('.word-card');
+            cards.forEach(card => {
+                if (card.dataset.rare === "true") {
+                    card.classList.add('correct');
+                }
+            });
+            isGameOver = true;
+            document.getElementById('status-msg').textContent = "Lösung: восьмеро, девятеро, десятеро";
+            document.getElementById('status-msg').style.color = "#333";
+        }
+
+        initGame();
+    </script>
+</body>
+</html>
