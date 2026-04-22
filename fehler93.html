@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fehlersucher: Sammelzahlwörter</title>
+    <style>
+        :root {
+            --primary-color: #0056b3;
+            --success-color: #28a745;
+            --error-color: #dc3545;
+            --bg-color: #f8f9fa;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 700px;
+            text-align: center;
+        }
+
+        h1 { font-size: 1.5rem; color: #333; }
+
+        .instruction {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            font-size: 0.95rem;
+            border: 1px solid #ddd;
+        }
+
+        .sentence-box {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .word {
+            font-size: 1.4rem;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+            user-select: none;
+        }
+
+        @media (hover: hover) {
+            .word:hover:not(.disabled) {
+                background-color: #e7f1ff;
+                border-color: var(--primary-color);
+            }
+        }
+
+        .word.selected-error {
+            background-color: var(--success-color) !important;
+            color: white;
+            border-color: var(--success-color);
+        }
+
+        .word.selected-wrong-guess {
+            background-color: var(--error-color) !important;
+            color: white;
+            border-color: var(--error-color);
+            animation: shake 0.4s ease;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .explanation-box {
+            min-height: 80px;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
+            text-align: left;
+            line-height: 1.5;
+        }
+
+        .explanation-box.visible { display: block; }
+        .correct-info { background-color: #d4edda; border: 1px solid var(--success-color); }
+
+        .next-btn {
+            padding: 12px 25px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            display: none;
+        }
+
+        .next-btn.visible { display: inline-block; }
+
+        .progress {
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        @media (max-width: 500px) {
+            .word { font-size: 1.2rem; padding: 4px 8px; }
+            h1 { font-size: 1.3rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Übung: Fehlersucher im Satz</h1>
+    
+    <p class="instruction">
+        Finde das Wort, das grammatikalisch falsch verwendet wurde. Klicke direkt auf das Wort!
+    </p>
+
+    <div class="progress" id="progress">Satz 1 von 8</div>
+
+    <div class="sentence-box" id="sentence-container"></div>
+
+    <div id="explanation" class="explanation-box correct-info"></div>
+
+    <button class="next-btn" id="next-btn" onclick="nextSentence()">Nächster Satz</button>
+</div>
+
+<script>
+    const sentences = [
+        {
+            text: "У меня есть двое сестёр.",
+            errorIdx: 3,
+            explanation: "Falsch: двое. Grund: Sammelzahlwörter dürfen nicht mit weiblichen Substantiven wie сестра verwendet werden. Richtig: две сестры."
+        },
+        {
+            text: "В комнате стоят двое столов.",
+            errorIdx: 3,
+            explanation: "Falsch: двое. Grund: Bei männlichen Gegenständen sind Sammelzahlwörter nur erlaubt, wenn sie belebt sind. Ein Tisch ist unbelebt. Richtig: два стола."
+        },
+        {
+            text: "Мы купили двое яблок.",
+            errorIdx: 2,
+            explanation: "Falsch: двое. Grund: Bei sächlichen Substantiven (Neutrum) wie яблоко sind Sammelzahlwörter nicht erlaubt. Richtig: два яблока."
+        },
+        {
+            text: "На улице гуляют две детей.",
+            errorIdx: 3,
+            explanation: "Falsch: две. Grund: Das Wort дети verlangt zwingend ein Sammelzahlwort. Richtig: двое детей."
+        },
+        {
+            text: "Я вижу двое красивых подруг.",
+            errorIdx: 2,
+            explanation: "Falsch: двое. Grund: подруга ist weiblich. Hier darf kein Sammelzahlwort stehen. Richtig: двух подруг."
+        },
+        {
+            text: "В магазине мы купили три сутки.",
+            errorIdx: 4,
+            explanation: "Falsch: три. Grund: Das Wort сутки existiert nur im Plural. Solche Wörter brauchen Sammelzahlwörter. Richtig: трое суток."
+        },
+        {
+            text: "На столе лежат три ножницы.",
+            errorIdx: 3,
+            explanation: "Falsch: три. Grund: ножницы ist ein Pluralwort. Man muss hier ein Sammelzahlwort benutzen. Richtig: трое ножниц."
+        },
+        {
+            text: "На завтрак мы съели двое яиц.",
+            errorIdx: 4,
+            explanation: "Falsch: двое. Grund: яйцо ist sächlich. Sammelzahlwörter sind beim Neutrum verboten. Richtig: два яйца."
+        }
+    ];
+
+    let currentIdx = 0;
+    let errorFound = false;
+
+    function initGame() {
+        renderSentence();
+    }
+
+    function renderSentence() {
+        const container = document.getElementById('sentence-container');
+        const progress = document.getElementById('progress');
+        const nextBtn = document.getElementById('next-btn');
+        const expl = document.getElementById('explanation');
+        
+        container.innerHTML = '';
+        expl.classList.remove('visible');
+        nextBtn.classList.remove('visible');
+        errorFound = false;
+        
+        const s = sentences[currentIdx];
+        progress.textContent = `Satz ${currentIdx + 1} von ${sentences.length}`;
+
+        const words = s.text.split(' ');
+
+        words.forEach((wordText, index) => {
+            const span = document.createElement('span');
+            span.className = 'word';
+            span.textContent = wordText;
+            span.onclick = () => handleWordClick(span, index);
+            container.appendChild(span);
+        });
+    }
+
+    function handleWordClick(element, clickedIdx) {
+        if (errorFound) return;
+
+        const s = sentences[currentIdx];
+        const expl = document.getElementById('explanation');
+        const nextBtn = document.getElementById('next-btn');
+
+        if (clickedIdx === s.errorIdx) {
+            element.classList.add('selected-error');
+            expl.innerHTML = s.explanation;
+            expl.classList.add('visible');
+            nextBtn.classList.add('visible');
+            errorFound = true;
+            disableAllWords();
+        } else {
+            element.classList.add('selected-wrong-guess');
+            setTimeout(() => {
+                element.classList.remove('selected-wrong-guess');
+            }, 800);
+        }
+    }
+
+    function disableAllWords() {
+        const allWords = document.querySelectorAll('.word');
+        allWords.forEach(w => w.classList.add('disabled'));
+    }
+
+    function nextSentence() {
+        currentIdx++;
+        if (currentIdx < sentences.length) {
+            renderSentence();
+        } else {
+            showFinal();
+        }
+    }
+
+    function showFinal() {
+        const container = document.getElementById('sentence-container');
+        const progress = document.getElementById('progress');
+        const expl = document.getElementById('explanation');
+        const nextBtn = document.getElementById('next-btn');
+
+        container.innerHTML = "<h2>Hervorragend!</h2>";
+        progress.textContent = "";
+        expl.innerHTML = "Du hast alle 8 grammatikalischen Fehler in den Sätzen erfolgreich gefunden.";
+        expl.classList.add('visible');
+        nextBtn.textContent = "Neu starten";
+        nextBtn.onclick = () => location.reload();
+        nextBtn.classList.add('visible');
+    }
+
+    initGame();
+</script>
+
+</body>
+</html>
