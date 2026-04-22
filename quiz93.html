@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sperrzonen-Quiz: 8 Fragen</title>
+    <style>
+        :root {
+            --primary-color: #0056b3;
+            --success-color: #28a745;
+            --error-color: #dc3545;
+            --bg-color: #f4f7f9;
+            --text-color: #333;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            color: var(--primary-color);
+            margin-bottom: 20px;
+        }
+
+        .question-text {
+            font-size: 1.2rem;
+            margin-bottom: 25px;
+            line-height: 1.4;
+            font-weight: 500;
+        }
+
+        .options-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .option-btn {
+            background: white;
+            border: 2px solid #dee2e6;
+            border-radius: 10px;
+            padding: 15px 20px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        @media (hover: hover) {
+            .option-btn:hover:not(.disabled) {
+                border-color: var(--primary-color);
+                background-color: #f0f7ff;
+            }
+        }
+
+        .option-btn.correct {
+            background-color: #d4edda;
+            border-color: var(--success-color);
+            color: #155724;
+        }
+
+        .option-btn.wrong {
+            background-color: #f8d7da;
+            border-color: var(--error-color);
+            color: #721c24;
+        }
+
+        .option-btn.disabled {
+            cursor: default;
+            pointer-events: none;
+        }
+
+        .feedback-area {
+            margin-top: 25px;
+            padding: 15px;
+            border-radius: 8px;
+            display: none;
+            text-align: left;
+            line-height: 1.5;
+            background-color: #e9ecef;
+        }
+
+        .feedback-area.visible {
+            display: block;
+        }
+
+        .next-btn {
+            margin-top: 20px;
+            padding: 12px 30px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            display: none;
+        }
+
+        .next-btn.visible {
+            display: inline-block;
+        }
+
+        .progress {
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+
+        @media (max-width: 500px) {
+            .container { padding: 20px; }
+            h1 { font-size: 1.3rem; }
+            .question-text { font-size: 1.1rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Sperrzonen-Quiz</h1>
+    
+    <div class="progress" id="progress">Frage 1 von 8</div>
+    
+    <div class="question-text" id="question">Lade Frage...</div>
+    
+    <div class="options-list" id="options"></div>
+
+    <div class="feedback-area" id="feedback"></div>
+
+    <button class="next-btn" id="next-btn" onclick="nextQuestion()">Nächste Frage</button>
+</div>
+
+<script>
+    const quizData = [
+        {
+            question: "Mit welchem Geschlecht dürfen Sammelzahlwörter niemals verwendet werden?",
+            options: [
+                { text: "Maskulinum belebt", correct: false },
+                { text: "Femininum", correct: true },
+                { text: "Pluralia tantum", correct: false }
+            ],
+            explanation: "Richtig! Bei weiblichen Substantiven darf man niemals Sammelzahlwörter benutzen. Man muss dwe studentki sagen."
+        },
+        {
+            question: "Darf man Sammelzahlwörter mit sächlichen Substantiven (Neutrum) wie jabloko verwenden?",
+            options: [
+                { text: "Ja, das ist erlaubt", correct: false },
+                { text: "Nur bei Tierjungen", correct: false },
+                { text: "Nein, das ist verboten", correct: true }
+            ],
+            explanation: "Korrekt! Das Neutrum ist eine Sperrzone. Es heißt dwa jabloka und niemals dwoje jablok."
+        },
+        {
+            question: "Wann ist die Nutzung bei männlichen Substantiven (Maskulinum) verboten?",
+            options: [
+                { text: "Wenn sie unbelebt (Dinge) sind", correct: true },
+                { text: "Wenn sie Personen bezeichnen", correct: false },
+                { text: "Es ist im Maskulinum nie verboten", correct: false }
+            ],
+            explanation: "Genau! Bei unbelebten Dingen im Maskulinum (z.B. stul - Stuhl) darf man nur Kardinalzahlen verwenden (dwa stula)."
+        },
+        {
+            question: "Welche Aussage über Pluralia tantum (Wörter nur im Plural) wie sutki ist richtig?",
+            options: [
+                { text: "Man darf nur Kardinalzahlen nutzen", correct: false },
+                { text: "Man muss Sammelzahlwörter nutzen", correct: true },
+                { text: "Sammelzahlwörter sind hier verboten", correct: false }
+            ],
+            explanation: "Richtig! Wörter wie sutki oder brjuki brauchen Sammelzahlwörter wie dwoje oder troje."
+        },
+        {
+            question: "Was gilt für belebte Personen im Maskulinum (z.B. studenty)?",
+            options: [
+                { text: "Nur Kardinalzahlen sind erlaubt", correct: false },
+                { text: "Nur Sammelzahlwörter sind erlaubt", correct: false },
+                { text: "Beide Varianten sind erlaubt", correct: true }
+            ],
+            explanation: "Richtig! Man kann sowohl dwa studenta als auch dwoje studentow sagen. Die Bedeutung ist gleich."
+        },
+        {
+            question: "Wie zählt man im Russischen das Wort deti (Kinder)?",
+            options: [
+                { text: "Vorrangig mit Sammelzahlwörtern", correct: true },
+                { text: "Immer mit dwe", correct: false },
+                { text: "Nur mit Kardinalzahlen", correct: false }
+            ],
+            explanation: "Korrekt! Bei deti, ljudi und rebjata verwendet man Sammelzahlwörter (dwoje detej)."
+        },
+        {
+            question: "Welche Form nutzt man bei Personalpronomen wie nas (uns)?",
+            options: [
+                { text: "Nas dwa", correct: false },
+                { text: "Nas dwoje", correct: true },
+                { text: "Dwa nas", correct: false }
+            ],
+            explanation: "Genau! Bei Pronomen nutzt man Sammelzahlwörter. Beispiel: Nas tschetwero (Wir sind zu viert)."
+        },
+        {
+            question: "Was ist bei Tierjungen (z.B. kotjata) erlaubt?",
+            options: [
+                { text: "Nur Sammelzahlwörter", correct: false },
+                { text: "Sowohl Sammel- als auch Kardinalzahlen", correct: true },
+                { text: "Nur Kardinalzahlen", correct: false }
+            ],
+            explanation: "Richtig! Man kann dwoje kotjat oder dwa kotjenka sagen. Beides ist grammatikalisch korrekt."
+        }
+    ];
+
+    let currentIdx = 0;
+    let answered = false;
+
+    function loadQuestion() {
+        answered = false;
+        const q = quizData[currentIdx];
+        document.getElementById('progress').textContent = `Frage ${currentIdx + 1} von ${quizData.length}`;
+        document.getElementById('question').textContent = q.question;
+        document.getElementById('feedback').classList.remove('visible');
+        document.getElementById('next-btn').classList.remove('visible');
+        
+        const optionsContainer = document.getElementById('options');
+        optionsContainer.innerHTML = '';
+
+        q.options.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.textContent = opt.text;
+            btn.onclick = () => checkAnswer(btn, opt.correct);
+            optionsContainer.appendChild(btn);
+        });
+    }
+
+    function checkAnswer(selectedBtn, isCorrect) {
+        if (answered) return;
+        answered = true;
+
+        const q = quizData[currentIdx];
+        const feedback = document.getElementById('feedback');
+        const nextBtn = document.getElementById('next-btn');
+        const allBtns = document.querySelectorAll('.option-btn');
+
+        allBtns.forEach(btn => {
+            btn.classList.add('disabled');
+            const optionData = q.options.find(o => o.text === btn.textContent);
+            if (optionData.correct) {
+                btn.classList.add('correct');
+            }
+        });
+
+        if (!isCorrect) {
+            selectedBtn.classList.add('wrong');
+        }
+
+        feedback.innerHTML = "<strong>" + (isCorrect ? "Richtig!" : "Falsch.") + "</strong><br>" + q.explanation;
+        feedback.classList.add('visible');
+        nextBtn.classList.add('visible');
+    }
+
+    function nextQuestion() {
+        currentIdx++;
+        if (currentIdx < quizData.length) {
+            loadQuestion();
+        } else {
+            showFinal();
+        }
+    }
+
+    function showFinal() {
+        const container = document.querySelector('.container');
+        container.innerHTML = "<h1>Quiz beendet!</h1><p class='question-text'>Du hast alle 8 Fragen zu den Regeln der Sammelzahlwörter erfolgreich bearbeitet.</p><button class='next-btn visible' onclick='location.reload()'>Neu starten</button>";
+    }
+
+    loadQuestion();
+</script>
+
+</body>
+</html>
