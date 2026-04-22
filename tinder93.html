@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Russisch Swipe-Quiz: Sammelzahlwörter</title>
+    <style>
+        :root {
+            --success-color: #28a745;
+            --error-color: #dc3545;
+            --bg-color: #f0f2f5;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+            touch-action: none; /* Verhindert Scrollen beim Swipen */
+        }
+
+        .header {
+            position: absolute;
+            top: 20px;
+            text-align: center;
+            padding: 0 10px;
+        }
+
+        h1 { font-size: 1.2rem; margin: 0; color: #333; }
+        p { font-size: 0.9rem; color: #666; margin: 5px 0; }
+
+        /* Tinder Card Container */
+        .card-container {
+            position: relative;
+            width: 300px;
+            height: 400px;
+            perspective: 1000px;
+        }
+
+        .card {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: grab;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+            user-select: none;
+            border: 4px solid transparent;
+        }
+
+        .card:active { cursor: grabbing; }
+
+        .card .word-phrase {
+            font-size: 1.8rem;
+            font-weight: bold;
+            text-align: center;
+            padding: 20px;
+        }
+
+        /* Feedback-Labels auf der Karte */
+        .stamp {
+            position: absolute;
+            top: 20px;
+            padding: 5px 15px;
+            border: 4px solid;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 1.5rem;
+            text-transform: uppercase;
+            opacity: 0;
+            transform: rotate(-15deg);
+        }
+
+        .stamp.right { border-color: var(--success-color); color: var(--success-color); right: 20px; }
+        .stamp.left { border-color: var(--error-color); color: var(--error-color); left: 20px; }
+
+        /* Steuerungshilfen unten */
+        .controls {
+            position: absolute;
+            bottom: 40px;
+            display: flex;
+            gap: 30px;
+        }
+
+        .btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: none;
+            background: white;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .btn:active { transform: scale(0.9); }
+        .btn.no { color: var(--error-color); }
+        .btn.yes { color: var(--success-color); }
+
+        .score {
+            position: absolute;
+            top: 100px;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        /* Mobile Anpassung */
+        @media (max-height: 600px) {
+            .card-container { height: 300px; width: 250px; }
+            .header { top: 10px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Sammelzahlwörter: Richtig oder Falsch?</h1>
+        <p>Rechts swipen (Richtig) | Links swipen (Falsch)</p>
+    </div>
+
+    <div class="score" id="score">Gelöst: 0 / 0</div>
+
+    <div class="card-container" id="container">
+        <!-- Karten werden hier generiert -->
+    </div>
+
+    <div class="controls">
+        <button class="btn no" onclick="swipe('left')">✖</button>
+        <button class="btn yes" onclick="swipe('right')">✔</button>
+    </div>
+
+<script>
+    const allQuestions = [
+        { text: "двое детей", correct: true },   // Spezialwort
+        { text: "двое сумок", correct: false },  // Femininum (falsch)
+        { text: "трое котят", correct: true },   // Tierjunges
+        { text: "двое окон", correct: false },   // Neutrum (falsch)
+        { text: "четверо ребят", correct: true },// Spezialwort
+        { text: "пятеро друзей", correct: true },// Mask. belebt
+        { text: "двое столов", correct: false }, // Mask. unbelebt (falsch)
+        { text: "двое ножниц", correct: true },  // Pluralia tantum
+        { text: "нас двое", correct: true },     // Pronomen
+        { text: "двое яблок", correct: false },  // Neutrum (falsch)
+        { text: "двое подруг", correct: false }, // Femininum (falsch)
+        { text: "двое носков", correct: true },  // Paar-Gegenstand
+        { text: "двое ложек", correct: false },  // Femininum (falsch)
+        { text: "двое суток", correct: true }    // Pluralia tantum
+    ];
+
+    let deck = [...allQuestions].sort(() => Math.random() - 0.5);
+    let currentIdx = 0;
+    let solvedCount = 0;
+    
+    const container = document.getElementById('container');
+    const scoreDisplay = document.getElementById('score');
+
+    let startX, startY, moveX, moveY;
+    let currentCard = null;
+
+    function createCard() {
+        if (currentIdx >= deck.length) {
+            container.innerHTML = "<div class='card'><h2>Fertig! 🎉</h2><button onclick='location.reload()'>Nochmal</button></div>";
+            return;
+        }
+
+        const q = deck[currentIdx];
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+            <div class="stamp left">Falsch</div>
+            <div class="stamp right">Richtig</div>
+            <div class="word-phrase">${q.text}</div>
+        `;
+
+        container.appendChild(card);
+        currentCard = card;
+
+        // Event Listener für Touch und Mouse
+        card.addEventListener('mousedown', startDrag);
+        card.addEventListener('touchstart', startDrag);
+    }
+
+    function startDrag(e) {
+        startX = e.type === 'mousedown' ? e.pageX : e.touches[0].pageX;
+        startY = e.type === 'mousedown' ? e.pageY : e.touches[0].pageY;
+        
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('touchmove', drag);
+        document.addEventListener('mouseup', endDrag);
+        document.addEventListener('touchend', endDrag);
+    }
+
+    function drag(e) {
+        if (!currentCard) return;
+        moveX = (e.type === 'mousemove' ? e.pageX : e.touches[0].pageX) - startX;
+        moveY = (e.type === 'mousemove' ? e.pageY : e.touches[0].pageY) - startY;
+
+        let rotation = moveX / 10;
+        currentCard.style.transform = `translate(${moveX}px, ${moveY}px) rotate(${rotation}deg)`;
+
+        // Stempel einblenden
+        const stampRight = currentCard.querySelector('.stamp.right');
+        const stampLeft = currentCard.querySelector('.stamp.left');
+        if (moveX > 50) {
+            stampRight.style.opacity = Math.min(moveX / 150, 1);
+            stampLeft.style.opacity = 0;
+        } else if (moveX < -50) {
+            stampLeft.style.opacity = Math.min(Math.abs(moveX) / 150, 1);
+            stampRight.style.opacity = 0;
+        } else {
+            stampRight.style.opacity = 0;
+            stampLeft.style.opacity = 0;
+        }
+    }
+
+    function endDrag() {
+        document.removeEventListener('mousemove', drag);
+        document.removeEventListener('touchmove', drag);
+        
+        if (Math.abs(moveX) > 120) {
+            const side = moveX > 0 ? 'right' : 'left';
+            swipe(side);
+        } else {
+            // Zurück in Mitte
+            currentCard.style.transform = '';
+            currentCard.querySelectorAll('.stamp').forEach(s => s.style.opacity = 0);
+        }
+    }
+
+    function swipe(side) {
+        if (!currentCard) return;
+
+        const question = deck[currentIdx];
+        const isUserRight = (side === 'right');
+        const isCorrectChoice = (isUserRight === question.correct);
+
+        if (isCorrectChoice) {
+            solvedCount++;
+        } else {
+            alert(`Falsch! "${question.text}" ist ${question.correct ? 'korrekt' : 'nicht erlaubt'}.`);
+        }
+
+        // Animation aus dem Bild
+        const moveOut = side === 'right' ? 1000 : -1000;
+        currentCard.style.transform = `translate(${moveOut}px, ${moveY || 0}px) rotate(${moveOut / 10}deg)`;
+        currentCard.style.opacity = 0;
+
+        setTimeout(() => {
+            currentCard.remove();
+            currentIdx++;
+            solvedCountDisplay();
+            createCard();
+        }, 300);
+
+        moveX = 0;
+    }
+
+    function solvedCountDisplay() {
+        scoreDisplay.textContent = `Gelöst: ${solvedCount} / ${currentIdx}`;
+    }
+
+    // Pfeiltasten Unterstützung
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowLeft') swipe('left');
+        if (e.key === 'ArrowRight') swipe('right');
+    });
+
+    createCard();
+</script>
+
+</body>
+</html>
