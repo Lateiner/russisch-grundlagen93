@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio-Visuelle Zuordnung</title>
+    <style>
+        :root {
+            --primary-color: #0056b3;
+            --success-color: #28a745;
+            --error-color: #dc3545;
+            --bg-color: #f0f2f5;
+            --card-bg: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
+        }
+
+        h1 { font-size: 1.5rem; color: #333; }
+
+        .instruction {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 0.95rem;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        /* Lautsprecher-Bereich */
+        .audio-section {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            border: 3px solid var(--primary-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .play-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 80px;
+            height: 80px;
+            cursor: pointer;
+            font-size: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s, background 0.2s;
+            box-shadow: 0 4px 10px rgba(0,86,179,0.3);
+        }
+
+        .play-btn:hover { transform: scale(1.1); }
+        .play-btn:active { transform: scale(0.95); }
+
+        /* Wort-Gitter */
+        .word-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .word-card {
+            background: var(--card-bg);
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            padding: 15px 5px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+
+        .word-card.correct {
+            background-color: var(--success-color);
+            border-color: var(--success-color);
+            color: white;
+        }
+
+        .word-card.wrong {
+            background-color: var(--error-color);
+            border-color: var(--error-color);
+            color: white;
+            animation: shake 0.4s ease;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .status-msg {
+            font-weight: bold;
+            height: 24px;
+            margin-bottom: 10px;
+        }
+
+        .reset-btn {
+            padding: 10px 20px;
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        @media (max-width: 400px) {
+            .word-grid { grid-template-columns: 1fr 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Hören & Erkennen</h1>
+    
+    <p class="instruction">
+        Klicke auf den Lautsprecher, um das Wort zu hören. Wähle dann die richtige Kachel aus.
+    </p>
+
+    <div class="audio-section">
+        <button class="play-btn" onclick="playCurrentWord()" title="Wort anhören">
+            🔊
+        </button>
+        <span id="audio-label">Klick für Audio</span>
+    </div>
+
+    <div id="status" class="status-msg"></div>
+
+    <div class="word-grid" id="grid"></div>
+
+    <button class="reset-btn" onclick="nextRound()">Nächstes Wort</button>
+</div>
+
+<script>
+    const allWords = ["двое", "трое", "четверо", "пятеро", "шестеро", "семеро", "восьмеро", "девятеро", "десятеро"];
+    let currentWord = "";
+    let canClick = true;
+
+    function shuffle(array) {
+        return array.sort(() => Math.random() - 0.5);
+    }
+
+    // Sprach-Synthese einrichten
+    function playCurrentWord() {
+        const utterance = new SpeechSynthesisUtterance(currentWord);
+        utterance.lang = 'ru-RU'; // Wichtig: Russisch erzwingen
+        utterance.rate = 0.8;    // Etwas langsamer für besseres Verständnis
+        window.speechSynthesis.speak(utterance);
+    }
+
+    function initGame() {
+        nextRound();
+    }
+
+    function nextRound() {
+        const grid = document.getElementById('grid');
+        const status = document.getElementById('status');
+        grid.innerHTML = '';
+        status.textContent = '';
+        canClick = true;
+
+        // Ein zufälliges Zielwort wählen
+        currentWord = allWords[Math.floor(Math.random() * allWords.length)];
+        
+        // Wörter für das Gitter mischen (alle Wörter anzeigen)
+        const shuffledWords = shuffle([...allWords]);
+
+        shuffledWords.forEach(word => {
+            const card = document.createElement('div');
+            card.className = 'word-card';
+            card.textContent = word;
+            card.onclick = () => handleChoice(card, word);
+            grid.appendChild(card);
+        });
+
+        // Automatisch abspielen beim Start der Runde
+        setTimeout(playCurrentWord, 500);
+    }
+
+    function handleChoice(card, selectedWord) {
+        if (!canClick) return;
+
+        const status = document.getElementById('status');
+        
+        if (selectedWord === currentWord) {
+            card.classList.add('correct');
+            status.textContent = "Правильно! (Richtig!)";
+            status.style.color = "var(--success-color)";
+            canClick = false;
+        } else {
+            card.classList.add('wrong');
+            status.textContent = "Попробуй еще раз! (Versuch es nochmal!)";
+            status.style.color = "var(--error-color)";
+            
+            // Fehlerfarbe nach kurzer Zeit entfernen
+            setTimeout(() => {
+                if (canClick) {
+                    card.classList.remove('wrong');
+                    status.textContent = "";
+                }
+            }, 800);
+        }
+    }
+
+    // Initialisierung
+    initGame();
+</script>
+
+</body>
+</html>
