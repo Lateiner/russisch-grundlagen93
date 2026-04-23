@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Satz-Baukasten: Sammelzahlwörter</title>
+    <style>
+        :root {
+            --primary-color: #0056b3;
+            --success-color: #28a745;
+            --error-color: #dc3545;
+            --warning-color: #ffc107;
+            --bg-color: #f4f7f9;
+            --tile-bg: #ffffff;
+        }
+
+        /* Verhindert jegliche Kursivschrift im gesamten Dokument */
+        * {
+            font-style: normal !important;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 1.6rem;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .instruction {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            font-size: 0.95rem;
+            border: 1px solid #ddd;
+            line-height: 1.5;
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            background: #ddd;
+            height: 8px;
+            border-radius: 4px;
+            margin-bottom: 25px;
+        }
+
+        #progress-bar {
+            height: 100%;
+            background: var(--primary-color);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .hint-box {
+            font-size: 1.1rem;
+            color: #555;
+            margin-bottom: 20px;
+            min-height: 1.5rem;
+        }
+
+        /* Bereich für den zusammengesetzten Satz */
+        .sentence-display {
+            background: #fff;
+            border: 2px dashed #bbb;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            min-height: 60px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            align-items: center;
+        }
+
+        /* Wort-Kacheln */
+        .tile-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .word-tile {
+            background: var(--tile-bg);
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            padding: 12px 18px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            user-select: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        @media (hover: hover) {
+            .word-tile:hover:not(.used) {
+                border-color: var(--primary-color);
+                transform: translateY(-2px);
+            }
+        }
+
+        .word-tile.used {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .placed-word {
+            background: var(--primary-color);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 6px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            animation: popIn 0.3s ease;
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .feedback-area {
+            height: 30px;
+            margin-bottom: 20px;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+
+        .clear-btn { background-color: #6c757d; color: white; }
+        .solution-btn { background-color: var(--warning-color); color: #333; }
+        .next-btn { background-color: var(--success-color); color: white; display: none; }
+
+        @media (max-width: 600px) {
+            .word-tile, .placed-word { font-size: 1rem; padding: 8px 12px; }
+            h1 { font-size: 1.3rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Transfer: Satz-Baukasten</h1>
+    
+    <p class="instruction">
+        Bilde einen korrekten russischen Satz. Klicke die Wort-Kacheln in der richtigen Reihenfolge an.
+    </p>
+
+    <div class="progress-bar-container">
+        <div id="progress-bar"></div>
+    </div>
+
+    <div class="hint-box" id="hint-text"></div>
+
+    <div class="sentence-display" id="sentence-target">
+        <!-- Hier erscheinen die angeklickten Wörter -->
+    </div>
+
+    <div class="tile-container" id="tile-source">
+        <!-- Hier erscheinen die verfügbaren Wörter -->
+    </div>
+
+    <div class="feedback-area" id="feedback"></div>
+
+    <div class="controls">
+        <button class="clear-btn" onclick="clearSentence()">Löschen</button>
+        <button class="solution-btn" id="solution-button" onclick="showSolution()">Lösung</button>
+        <button class="next-btn" id="next-button" onclick="nextQuestion()">Nächster Satz</button>
+    </div>
+</div>
+
+<script>
+    const questions = [
+        {
+            correctOrder: ["Нас", "было", "четверо", "."],
+            hint: "Wir waren zu viert.",
+            shuffled: ["было", "четверо", "Нас", "."]
+        },
+        {
+            correctOrder: ["У", "него", "трое", "детей", "."],
+            hint: "Er hat drei Kinder.",
+            shuffled: ["детей", "трое", "него", "У", "."]
+        },
+        {
+            correctOrder: ["В", "комнате", "двое", "ножниц", "."],
+            hint: "Im Zimmer liegen zwei Scheren.",
+            shuffled: ["ножниц", "В", "двое", "комнате", "."]
+        },
+        {
+            correctOrder: ["Их", "было", "всего", "семеро", "."],
+            hint: "Es waren insgesamt nur sieben von ihnen.",
+            shuffled: ["семеро", "Их", "всего", "было", "."]
+        },
+        {
+            correctOrder: ["Нам", "нужен", "столик", "на", "четверых", "."],
+            hint: "Wir brauchen einen Tisch für vier Personen.",
+            shuffled: ["столик", "четверых", "на", "нужен", "Нам", "."]
+        },
+        {
+            correctOrder: ["Во", "дворе", "играют", "пятеро", "ребят", "."],
+            hint: "Im Hof spielen fünf Leute.",
+            shuffled: ["ребят", "пятеро", "играют", "дворе", "Во", "."]
+        },
+        {
+            correctOrder: ["Он", "пришёл", "с", "двоими", "друзьями", "."],
+            hint: "Er kam mit zwei Freunden.",
+            shuffled: ["друзьями", "двоими", "с", "пришёл", "Он", "."]
+        },
+        {
+            correctOrder: ["В", "коробке", "нет", "двоих", "котят", "."],
+            hint: "In der Schachtel fehlen zwei Kätzchen.",
+            shuffled: ["котят", "двоих", "нет", "коробке", "В", "."]
+        }
+    ];
+
+    let currentIdx = 0;
+    let currentInput = [];
+    let solved = false;
+
+    function initQuestion() {
+        const q = questions[currentIdx];
+        const tileSource = document.getElementById('tile-source');
+        const sentenceTarget = document.getElementById('sentence-target');
+        const hintText = document.getElementById('hint-text');
+        const nextBtn = document.getElementById('next-button');
+        const feedback = document.getElementById('feedback');
+        const progressBar = document.getElementById('progress-bar');
+        const solBtn = document.getElementById('solution-button');
+
+        tileSource.innerHTML = '';
+        sentenceTarget.innerHTML = '';
+        hintText.textContent = "Bedeutung: " + q.hint;
+        feedback.textContent = '';
+        nextBtn.style.display = 'none';
+        solBtn.style.display = 'inline-block';
+        currentInput = [];
+        solved = false;
+        
+        progressBar.style.width = (currentIdx / questions.length) * 100 + "%";
+
+        // Kacheln mischen
+        const shuffledWords = [...q.shuffled].sort(() => Math.random() - 0.5);
+        shuffledWords.forEach((word, index) => {
+            const tile = document.createElement('div');
+            tile.className = 'word-tile';
+            tile.textContent = word;
+            tile.onclick = () => addWord(word, tile);
+            tileSource.appendChild(tile);
+        });
+    }
+
+    function addWord(word, tileElement) {
+        if (solved) return;
+        currentInput.push(word);
+        tileElement.classList.add('used');
+
+        const placedWord = document.createElement('div');
+        placedWord.className = 'placed-word';
+        placedWord.textContent = word;
+        placedWord.onclick = () => clearSentence();
+        document.getElementById('sentence-target').appendChild(placedWord);
+
+        checkSentence();
+    }
+
+    function checkSentence() {
+        const q = questions[currentIdx];
+        const feedback = document.getElementById('feedback');
+
+        if (currentInput.length === q.correctOrder.length) {
+            const isCorrect = JSON.stringify(currentInput) === JSON.stringify(q.correctOrder);
+            
+            if (isCorrect) {
+                feedback.textContent = "Правильно!";
+                feedback.style.color = "var(--success-color)";
+                document.getElementById('next-button').style.display = 'inline-block';
+                document.getElementById('solution-button').style.display = 'none';
+                solved = true;
+            } else {
+                feedback.textContent = "Noch nicht ganz richtig.";
+                feedback.style.color = "var(--error-color)";
+                setTimeout(clearSentence, 1200);
+            }
+        }
+    }
+
+    function showSolution() {
+        if (solved) return;
+        const q = questions[currentIdx];
+        const sentenceTarget = document.getElementById('sentence-target');
+        const feedback = document.getElementById('feedback');
+        
+        // UI bereinigen
+        sentenceTarget.innerHTML = '';
+        document.querySelectorAll('.word-tile').forEach(t => t.classList.add('used'));
+        
+        // Richtigen Satz anzeigen
+        q.correctOrder.forEach(word => {
+            const placedWord = document.createElement('div');
+            placedWord.className = 'placed-word';
+            placedWord.style.backgroundColor = '#6c757d'; // Grau für Lösung
+            placedWord.textContent = word;
+            sentenceTarget.appendChild(placedWord);
+        });
+
+        feedback.textContent = "Lösung angezeigt.";
+        feedback.style.color = "#333";
+        document.getElementById('next-button').style.display = 'inline-block';
+        document.getElementById('solution-button').style.display = 'none';
+        solved = true;
+    }
+
+    function clearSentence() {
+        if (solved) return;
+        currentInput = [];
+        document.getElementById('sentence-target').innerHTML = '';
+        document.getElementById('feedback').textContent = '';
+        document.querySelectorAll('.word-tile').forEach(tile => tile.classList.remove('used'));
+    }
+
+    function nextQuestion() {
+        currentIdx++;
+        if (currentIdx < questions.length) {
+            initQuestion();
+        } else {
+            showFinal();
+        }
+    }
+
+    function showFinal() {
+        document.getElementById('progress-bar').style.width = "100%";
+        document.getElementById('hint-text').textContent = "";
+        document.getElementById('sentence-target').innerHTML = "<h2>Hervorragend!</h2>";
+        document.getElementById('tile-source').innerHTML = "<p>Du hast alle Sätze erfolgreich beendet.</p>";
+        document.getElementById('next-button').textContent = "Neu starten";
+        document.getElementById('next-button').onclick = () => location.reload();
+        document.getElementById('solution-button').style.display = 'none';
+        document.getElementById('feedback').textContent = "";
+    }
+
+    initQuestion();
+</script>
+
+</body>
+</html>
