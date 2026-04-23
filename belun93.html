@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Akkusativ-Check: Belebt vs. Unbelebt</title>
+    <style>
+        :root {
+            --primary-color: #0056b3;
+            --success-color: #28a745;
+            --error-color: #dc3545;
+            --bg-color: #f0f2f5;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
+        }
+
+        h1 { font-size: 1.5rem; color: #333; margin-bottom: 20px; }
+
+        .progress-container {
+            width: 100%;
+            background: #ddd;
+            height: 8px;
+            border-radius: 4px;
+            margin-bottom: 25px;
+            overflow: hidden;
+        }
+
+        #progress-bar {
+            height: 100%;
+            background: var(--primary-color);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .sentence-card {
+            background: white;
+            padding: 40px 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-bottom: 25px;
+            font-size: 1.3rem;
+            min-height: 100px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            line-height: 1.6;
+        }
+
+        .placeholder {
+            color: var(--primary-color);
+            font-weight: bold;
+            border-bottom: 2px solid var(--primary-color);
+            min-width: 80px;
+            display: inline-block;
+        }
+
+        .options-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .option-btn {
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            padding: 15px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+            font-weight: bold;
+        }
+
+        @media (hover: hover) {
+            .option-btn:hover:not(.disabled) {
+                border-color: var(--primary-color);
+                background-color: #f0f7ff;
+            }
+        }
+
+        .option-btn.correct {
+            background-color: var(--success-color);
+            border-color: var(--success-color);
+            color: white;
+        }
+
+        .option-btn.wrong {
+            background-color: var(--error-color);
+            border-color: var(--error-color);
+            color: white;
+            animation: shake 0.4s ease;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .option-btn.disabled {
+            pointer-events: none;
+            opacity: 0.6;
+        }
+
+        .feedback-area {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            font-weight: bold;
+            min-height: 60px;
+            display: none;
+            line-height: 1.4;
+        }
+
+        .feedback-area.visible { display: block; }
+
+        .next-btn {
+            margin-top: 20px;
+            padding: 12px 35px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            display: none;
+        }
+
+        @media (max-width: 480px) {
+            .sentence-card { font-size: 1.1rem; }
+            .option-btn { font-size: 1.1rem; }
+            h1 { font-size: 1.3rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Akkusativ: Belebt oder Unbelebt?</h1>
+    
+    <div class="progress-container">
+        <div id="progress-bar"></div>
+    </div>
+
+    <div class="sentence-card" id="sentence">
+        <!-- Satz erscheint hier -->
+    </div>
+
+    <div class="options-container" id="options">
+        <!-- Auswahl-Buttons -->
+    </div>
+
+    <div id="feedback" class="feedback-area"></div>
+
+    <button class="next-btn" id="next-btn" onclick="nextQuestion()">Nächster Satz</button>
+</div>
+
+<script>
+    const questions = [
+        {
+            sentence: "Я вижу ... друзей.",
+            opt1: "двое",
+            opt2: "двоих",
+            correct: "двоих",
+            explanation: "Richtig: двоих. Freunde sind belebt, daher entspricht der Akkusativ dem Genitiv."
+        },
+        {
+            sentence: "Мы купили ... брюк.",
+            opt1: "двое",
+            opt2: "двоих",
+            correct: "двое",
+            explanation: "Richtig: двое. Hosen sind unbelebt, daher entspricht der Akkusativ dem Nominativ."
+        },
+        {
+            sentence: "В зоопарке я видел ... котят.",
+            opt1: "трое",
+            opt2: "троих",
+            correct: "троих",
+            explanation: "Richtig: троих. Kätzchen sind belebt (Tiere), also nutzt man die Genitiv-Form."
+        },
+        {
+            sentence: "На столе я вижу ... ножниц.",
+            opt1: "трое",
+            opt2: "троих",
+            correct: "трое",
+            explanation: "Richtig: трое. Scheren sind unbelebt, also nutzt man die Nominativ-Form."
+        },
+        {
+            sentence: "Нам нужно позвать ... ребят.",
+            opt1: "четверо",
+            opt2: "четверых",
+            correct: "четверых",
+            explanation: "Richtig: четверых. Leute/Jungs sind belebt, daher die Endung -ых."
+        },
+        {
+            sentence: "Он прождал здесь ... суток.",
+            opt1: "четверо",
+            opt2: "четверых",
+            correct: "четверо",
+            explanation: "Richtig: четверо. Tage (24h) sind unbelebt, daher die Nominativ-Form."
+        },
+        {
+            sentence: "Я встретил ... знакомых мужчин.",
+            opt1: "пятеро",
+            opt2: "пятерых",
+            correct: "пятерых",
+            explanation: "Richtig: пятерых. Männer sind belebt, also Akkusativ = Genitiv."
+        },
+        {
+            sentence: "Она надела ... перчаток.",
+            opt1: "двое",
+            opt2: "двоих",
+            correct: "двое",
+            explanation: "Richtig: двое. Handschuhe sind unbelebt, daher die Nominativ-Form."
+        }
+    ];
+
+    let currentIdx = 0;
+
+    function showQuestion() {
+        const q = questions[currentIdx];
+        const sentenceEl = document.getElementById('sentence');
+        const optionsEl = document.getElementById('options');
+        const feedbackEl = document.getElementById('feedback');
+        const nextBtn = document.getElementById('next-btn');
+        const progressBar = document.getElementById('progress-bar');
+
+        sentenceEl.innerHTML = q.sentence.replace("...", '<span class="placeholder">...</span>');
+        feedbackEl.classList.remove('visible');
+        nextBtn.style.display = 'none';
+        progressBar.style.width = `${(currentIdx / questions.length) * 100}%`;
+
+        optionsEl.innerHTML = '';
+        [q.opt1, q.opt2].forEach(text => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.textContent = text;
+            btn.onclick = () => checkAnswer(btn, text === q.correct);
+            optionsEl.appendChild(btn);
+        });
+    }
+
+    function checkAnswer(btn, isCorrect) {
+        const q = questions[currentIdx];
+        const btns = document.querySelectorAll('.option-btn');
+        const feedbackEl = document.getElementById('feedback');
+        const sentenceEl = document.getElementById('sentence');
+
+        btns.forEach(b => b.classList.add('disabled'));
+
+        if (isCorrect) {
+            btn.classList.add('correct');
+            feedbackEl.style.backgroundColor = "#d4edda";
+            feedbackEl.style.color = "#155724";
+            sentenceEl.innerHTML = q.sentence.replace("...", `<span style="color: var(--success-color)">${q.correct}</span>`);
+        } else {
+            btn.classList.add('wrong');
+            feedbackEl.style.backgroundColor = "#f8d7da";
+            feedbackEl.style.color = "#721c24";
+            // Zeige auch den richtigen Button an
+            btns.forEach(b => {
+                if (b.textContent === q.correct) b.classList.add('correct');
+            });
+        }
+
+        feedbackEl.innerHTML = q.explanation;
+        feedbackEl.classList.add('visible');
+        document.getElementById('next-btn').style.display = 'inline-block';
+    }
+
+    function nextQuestion() {
+        currentIdx++;
+        if (currentIdx < questions.length) {
+            showQuestion();
+        } else {
+            showFinal();
+        }
+    }
+
+    function showFinal() {
+        document.getElementById('progress-bar').style.width = "100%";
+        document.getElementById('sentence').innerHTML = "<h2>Hervorragend!</h2><p>Du hast den Unterschied zwischen belebtem und unbelebtem Akkusativ gelernt.</p>";
+        document.getElementById('options').innerHTML = "";
+        document.getElementById('feedback').classList.remove('visible');
+        document.getElementById('next-btn').textContent = "Neu starten";
+        document.getElementById('next-btn').onclick = () => location.reload();
+    }
+
+    showQuestion();
+</script>
+
+</body>
+</html>
