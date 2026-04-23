@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deklination: Fälle-Puzzle (4 Aufgaben)</title>
+    <style>
+        :root {
+            --primary-color: #0056b3;
+            --success-color: #28a745;
+            --error-color: #dc3545;
+            --bg-color: #f4f7f9;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
+        }
+
+        h1 { font-size: 1.5rem; color: #333; margin-bottom: 10px; }
+
+        .level-indicator {
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+        }
+
+        .instruction {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            font-size: 0.9rem;
+            border: 1px solid #ddd;
+            line-height: 1.4;
+        }
+
+        .word-bank {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 30px;
+            min-height: 80px;
+            padding: 15px;
+            background: rgba(255,255,255,0.6);
+            border-radius: 10px;
+            border: 2px dashed #ccc;
+        }
+
+        .word-bubble {
+            background: white;
+            border: 2px solid var(--primary-color);
+            border-radius: 20px;
+            padding: 8px 18px;
+            cursor: pointer;
+            transition: all 0.2s;
+            user-select: none;
+            font-weight: bold;
+        }
+
+        .word-bubble.selected {
+            background-color: var(--primary-color);
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .word-bubble.hidden { opacity: 0; pointer-events: none; }
+
+        .case-table {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .case-row {
+            display: grid;
+            grid-template-columns: 130px 1fr;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .case-label {
+            text-align: right;
+            font-weight: bold;
+            font-size: 0.9rem;
+            color: #555;
+        }
+
+        .drop-zone {
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 1.1rem;
+        }
+
+        .drop-zone.correct {
+            border-color: var(--success-color);
+            background-color: #d4edda;
+            color: #155724;
+            font-weight: bold;
+        }
+
+        .drop-zone.wrong {
+            border-color: var(--error-color);
+            background-color: #f8d7da;
+            animation: shake 0.4s ease;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .controls {
+            margin-top: 30px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .next-btn { background-color: var(--success-color); color: white; display: none; }
+        .reset-btn { background-color: #6c757d; color: white; }
+
+        @media (max-width: 450px) {
+            .case-row { grid-template-columns: 100px 1fr; }
+            .case-label { font-size: 0.8rem; }
+            .word-bubble { font-size: 0.9rem; padding: 6px 12px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Übung: Deklination (Puzzle)</h1>
+    
+    <div class="level-indicator" id="level-text">Aufgabe 1 von 4</div>
+    
+    <p class="instruction" id="instruction-text">
+        Bringe die Formen von <strong>двое</strong> in die richtige Reihenfolge. <br>
+        Klicke erst ein Wort, dann das passende Feld.
+    </p>
+
+    <div class="word-bank" id="word-bank"></div>
+
+    <div class="case-table" id="case-table">
+        <div class="case-row">
+            <div class="case-label">Nominativ</div>
+            <div class="drop-zone" data-case="nom" onclick="handleDrop(this)">?</div>
+        </div>
+        <div class="case-row">
+            <div class="case-label">Genitiv</div>
+            <div class="drop-zone" data-case="gen" onclick="handleDrop(this)">?</div>
+        </div>
+        <div class="case-row">
+            <div class="case-label">Dativ</div>
+            <div class="drop-zone" data-case="dat" onclick="handleDrop(this)">?</div>
+        </div>
+        <div class="case-row">
+            <div class="case-label">Akkusativ (bel.)</div>
+            <div class="drop-zone" data-case="akk" onclick="handleDrop(this)">?</div>
+        </div>
+        <div class="case-row">
+            <div class="case-label">Instrumental</div>
+            <div class="drop-zone" data-case="ins" onclick="handleDrop(this)">?</div>
+        </div>
+        <div class="case-row">
+            <div class="case-label">Präpositiv</div>
+            <div class="drop-zone" data-case="prp" onclick="handleDrop(this)">?</div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="reset-btn" onclick="initLevel()">Neu starten</button>
+        <button class="next-btn" id="next-btn" onclick="nextLevel()">Nächste Aufgabe</button>
+    </div>
+</div>
+
+<script>
+    const levels = [
+        {
+            numeral: "двое",
+            data: [
+                { case: "nom", word: "двое" },
+                { case: "gen", word: "двоих" },
+                { case: "dat", word: "двоим" },
+                { case: "akk", word: "двоих" },
+                { case: "ins", word: "двоими" },
+                { case: "prp", word: "о двоих" }
+            ]
+        },
+        {
+            numeral: "четверо",
+            data: [
+                { case: "nom", word: "четверо" },
+                { case: "gen", word: "четверых" },
+                { case: "dat", word: "четверым" },
+                { case: "akk", word: "четверых" },
+                { case: "ins", word: "четверыми" },
+                { case: "prp", word: "о четверых" }
+            ]
+        },
+        {
+            numeral: "трое",
+            data: [
+                { case: "nom", word: "трое" },
+                { case: "gen", word: "троих" },
+                { case: "dat", word: "троим" },
+                { case: "akk", word: "троих" },
+                { case: "ins", word: "троими" },
+                { case: "prp", word: "о троих" }
+            ]
+        },
+        {
+            numeral: "шестеро",
+            data: [
+                { case: "nom", word: "шестеро" },
+                { case: "gen", word: "шестерых" },
+                { case: "dat", word: "шестерым" },
+                { case: "akk", word: "шестерых" },
+                { case: "ins", word: "шестерыми" },
+                { case: "prp", word: "о шестерых" }
+            ]
+        }
+    ];
+
+    let currentLevelIdx = 0;
+    let selectedElement = null;
+
+    function shuffle(array) {
+        return array.sort(() => Math.random() - 0.5);
+    }
+
+    function initLevel() {
+        const level = levels[currentLevelIdx];
+        const bank = document.getElementById('word-bank');
+        const zones = document.querySelectorAll('.drop-zone');
+        const nextBtn = document.getElementById('next-btn');
+        
+        document.getElementById('level-text').textContent = `Aufgabe ${currentLevelIdx + 1} von 4`;
+        document.getElementById('instruction-text').innerHTML = `Bringe die Formen von <strong>${level.numeral}</strong> in die richtige Reihenfolge.`;
+        
+        bank.innerHTML = '';
+        nextBtn.style.display = 'none';
+        selectedElement = null;
+
+        zones.forEach(zone => {
+            zone.textContent = '?';
+            zone.className = 'drop-zone';
+        });
+
+        // Alle Wörter als einzelne Bubbles (auch Doubletten wie двоих)
+        shuffle([...level.data]).forEach((item, index) => {
+            const div = document.createElement('div');
+            div.className = 'word-bubble';
+            div.textContent = item.word;
+            div.dataset.word = item.word;
+            div.dataset.index = index; // Eindeutige ID für dieses spezifische Bubble
+            div.onclick = () => selectWord(div);
+            bank.appendChild(div);
+        });
+    }
+
+    function selectWord(el) {
+        document.querySelectorAll('.word-bubble').forEach(b => b.classList.remove('selected'));
+        selectedElement = el;
+        el.classList.add('selected');
+    }
+
+    function handleDrop(zone) {
+        if (!selectedElement || zone.classList.contains('correct')) return;
+
+        const level = levels[currentLevelIdx];
+        const targetCase = zone.dataset.case;
+        const selectedWord = selectedElement.dataset.word;
+
+        const correctEntry = level.data.find(d => d.case === targetCase);
+
+        if (selectedWord === correctEntry.word) {
+            zone.textContent = selectedWord;
+            zone.classList.add('correct');
+            selectedElement.classList.add('hidden');
+            selectedElement = null;
+            checkWin();
+        } else {
+            zone.classList.add('wrong');
+            setTimeout(() => zone.classList.remove('wrong'), 400);
+        }
+    }
+
+    function checkWin() {
+        const correctCount = document.querySelectorAll('.drop-zone.correct').length;
+        if (correctCount === 6) {
+            document.getElementById('next-btn').style.display = 'inline-block';
+            if (currentLevelIdx === levels.length - 1) {
+                document.getElementById('next-btn').textContent = "Fertig! 🎉";
+            }
+        }
+    }
+
+    function nextLevel() {
+        if (currentLevelIdx < levels.length - 1) {
+            currentLevelIdx++;
+            initLevel();
+        } else {
+            alert("Hervorragend! Du hast alle Deklinations-Aufgaben abgeschlossen.");
+            currentLevelIdx = 0;
+            initLevel();
+        }
+    }
+
+    initLevel();
+</script>
+</body>
+</html>
