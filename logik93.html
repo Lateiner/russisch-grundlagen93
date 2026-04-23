@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logik-Matrix: Sammelzahlwörter</title>
+    <style>
+        :root {
+            --primary-color: #0056b3;
+            --success-color: #28a745;
+            --error-color: #dc3545;
+            --warning-color: #ffc107;
+            --bg-color: #f4f7f9;
+        }
+
+        /* Verhindert Kursivschrift im gesamten Dokument */
+        * {
+            font-style: normal !important;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 700px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 1.6rem;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .instruction {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            font-size: 0.95rem;
+            border: 1px solid #ddd;
+            line-height: 1.5;
+        }
+
+        .matrix-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 12px;
+            margin-bottom: 30px;
+        }
+
+        .word-tile {
+            background: white;
+            border: 2px solid #dee2e6;
+            border-radius: 10px;
+            padding: 20px 10px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 60px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            font-weight: 500;
+        }
+
+        @media (hover: hover) {
+            .word-tile:hover:not(.correct):not(.is-over) {
+                border-color: var(--primary-color);
+                background-color: #f0f7ff;
+            }
+        }
+
+        .word-tile.correct {
+            background-color: var(--success-color);
+            border-color: var(--success-color);
+            color: white;
+            cursor: default;
+        }
+
+        .word-tile.wrong {
+            background-color: var(--error-color);
+            border-color: var(--error-color);
+            color: white;
+            animation: shake 0.4s ease;
+        }
+
+        .word-tile.solution-highlight {
+            border: 3px dashed var(--warning-color);
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .status-msg {
+            font-weight: bold;
+            margin-bottom: 20px;
+            min-height: 24px;
+            font-size: 1.1rem;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        button {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1rem;
+        }
+
+        .solution-btn { background-color: var(--warning-color); color: #333; }
+        .reset-btn { background-color: #6c757d; color: white; }
+
+        @media (max-width: 480px) {
+            .matrix-grid { grid-template-columns: 1fr 1fr; }
+            .word-tile { font-size: 1rem; padding: 15px 5px; }
+            h1 { font-size: 1.3rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Logik-Matrix</h1>
+    
+    <p class="instruction">
+        Finde alle Substantive, die <strong>zwingend</strong> ein Sammelzahlwort benötigen (z. B. Pluralia tantum oder Wörter wie ребята). <br>
+        <strong>Anleitung:</strong> Klicke auf die richtigen Wörter im Gitter.
+    </p>
+
+    <div id="status-msg" class="status-msg"></div>
+
+    <div class="matrix-grid" id="matrixGrid">
+        <!-- Wörter werden per JS eingefügt -->
+    </div>
+
+    <div class="controls">
+        <button class="solution-btn" onclick="showSolution()">Lösung</button>
+        <button class="reset-btn" onclick="initGame()">Neu starten</button>
+    </div>
+</div>
+
+<script>
+    // Wörter-Pool
+    const words = [
+        // Zielwörter (benötigen zwingend Sammelzahlwörter)
+        { text: "сутки", target: true },
+        { text: "ножницы", target: true },
+        { text: "ребята", target: true },
+        { text: "дети", target: true },
+        { text: "люди", target: true },
+        { text: "брюки", target: true },
+        { text: "очки", target: true },
+        { text: "сани", target: true },
+        // Ablenker (brauchen Kardinalzahlen oder Sammelzahlwörter sind optional)
+        { text: "яблоки", target: false },
+        { text: "столы", target: false },
+        { text: "машины", target: false },
+        { text: "окna", target: false },
+        { text: "кошки", target: false },
+        { text: "книги", target: false },
+        { text: "стулья", target: false },
+        { text: "студентки", target: false }
+    ];
+
+    let foundTargets = 0;
+    let totalTargets = words.filter(w => w.target).length;
+    let isGameOver = false;
+
+    function shuffle(array) {
+        return array.sort(() => Math.random() - 0.5);
+    }
+
+    function initGame() {
+        const grid = document.getElementById('matrixGrid');
+        const status = document.getElementById('status-msg');
+        grid.innerHTML = '';
+        status.textContent = '';
+        foundTargets = 0;
+        isGameOver = false;
+
+        shuffle([...words]).forEach(w => {
+            const tile = document.createElement('div');
+            tile.className = 'word-tile';
+            tile.textContent = w.text;
+            tile.dataset.target = w.target;
+            tile.onclick = () => handleTileClick(tile);
+            grid.appendChild(tile);
+        });
+    }
+
+    function handleTileClick(tile) {
+        if (isGameOver || tile.classList.contains('correct')) return;
+
+        const isTarget = tile.dataset.target === "true";
+
+        if (isTarget) {
+            tile.classList.add('correct');
+            foundTargets++;
+            checkWin();
+        } else {
+            tile.classList.add('wrong');
+            setTimeout(() => {
+                tile.classList.remove('wrong');
+            }, 800);
+        }
+    }
+
+    function checkWin() {
+        const status = document.getElementById('status-msg');
+        if (foundTargets === totalTargets) {
+            status.textContent = "Отлично! Du hast alle Spezialwörter gefunden.";
+            status.style.color = "var(--success-color)";
+            isGameOver = true;
+        } else {
+            status.textContent = `Gefunden: ${foundTargets} von ${totalTargets}`;
+            status.style.color = "#333";
+        }
+    }
+
+    function showSolution() {
+        if (isGameOver) return;
+        const tiles = document.querySelectorAll('.word-tile');
+        tiles.forEach(tile => {
+            if (tile.dataset.target === "true") {
+                tile.classList.add('solution-highlight');
+            }
+        });
+        document.getElementById('status-msg').textContent = "Markierte Wörter brauchen Sammelzahlwörter.";
+        isGameOver = true;
+    }
+
+    initGame();
+</script>
+
+</body>
+</html>
