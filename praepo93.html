@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Präpositions-Match: Sammelzahlwörter</title>
+    <style>
+        :root {
+            --primary-color: #0056b3;
+            --success-color: #28a745;
+            --error-color: #dc3545;
+            --bg-color: #f4f7f9;
+        }
+
+        /* Verhindert jegliche Kursivschrift im gesamten Dokument */
+        * {
+            font-style: normal !important;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
+        }
+
+        h1 { 
+            font-size: 1.6rem; 
+            color: #333; 
+            margin-bottom: 10px; 
+        }
+
+        .instruction {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            font-size: 0.95rem;
+            border: 1px solid #ddd;
+            line-height: 1.5;
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            background: #ddd;
+            height: 8px;
+            border-radius: 4px;
+            margin-bottom: 25px;
+            overflow: hidden;
+        }
+
+        #progress-bar {
+            height: 100%;
+            background: var(--primary-color);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .sentence-card {
+            background: white;
+            padding: 40px 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-bottom: 25px;
+            font-size: 1.4rem;
+            min-height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1.6;
+        }
+
+        .placeholder {
+            color: var(--primary-color);
+            font-weight: bold;
+            border-bottom: 3px dashed var(--primary-color);
+            padding: 0 10px;
+            margin: 0 5px;
+        }
+
+        .options-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            width: 100%;
+        }
+
+        .option-btn {
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 12px;
+            padding: 20px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: bold;
+            color: #333;
+        }
+
+        @media (hover: hover) {
+            .option-btn:hover:not(.disabled) {
+                border-color: var(--primary-color);
+                background-color: #f0f7ff;
+            }
+        }
+
+        .option-btn.correct {
+            background-color: var(--success-color);
+            border-color: var(--success-color);
+            color: white;
+        }
+
+        .option-btn.wrong {
+            background-color: var(--error-color);
+            border-color: var(--error-color);
+            color: white;
+            animation: shake 0.4s ease;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .option-btn.disabled {
+            pointer-events: none;
+            opacity: 0.7;
+        }
+
+        .feedback-box {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 10px;
+            font-weight: 500;
+            display: none;
+            text-align: left;
+            line-height: 1.5;
+            background-color: #fff;
+            border: 1px solid #ddd;
+        }
+
+        .feedback-box.visible {
+            display: block;
+        }
+
+        .next-btn {
+            margin-top: 25px;
+            padding: 15px 40px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            display: none;
+            font-weight: bold;
+        }
+
+        @media (max-width: 500px) {
+            .sentence-card { font-size: 1.2rem; padding: 30px 15px; }
+            .option-btn { padding: 15px 10px; font-size: 1.1rem; }
+            .options-container { grid-template-columns: 1fr; }
+            h1 { font-size: 1.4rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Übung: Präpositions-Match</h1>
+    
+    <p class="instruction">
+        Wähle die richtige deklinierten Form des Zahlworts passend zur Präposition im Satz aus.
+    </p>
+
+    <div class="progress-bar-container">
+        <div id="progress-bar"></div>
+    </div>
+
+    <div class="sentence-card" id="sentence-display">
+        <!-- Der Satz erscheint hier -->
+    </div>
+
+    <div class="options-container" id="options-display">
+        <!-- Buttons erscheinen hier -->
+    </div>
+
+    <div id="feedback-display" class="feedback-box">
+        <!-- Erklärung erscheint hier -->
+    </div>
+
+    <button class="next-btn" id="next-button" onclick="nextQuestion()">Nächster Satz</button>
+</div>
+
+<script>
+    const quizData = [
+        {
+            sentence: "Он пришёл с ... котятами.",
+            options: ["двоих", "двоими"],
+            correct: "двоими",
+            explanation: "Richtig: двоими. Die Präposition с (mit) verlangt in diesem Kontext den Instrumental. Die Endung für dwoje im Instrumental lautet -ими."
+        },
+        {
+            sentence: "Расскажи мне о ... котятах.",
+            options: ["двоих", "двоими"],
+            correct: "двоих",
+            explanation: "Richtig: двоих. Die Präposition о (über) verlangt den Präpositiv. Die Endung lautet hier -их."
+        },
+        {
+            sentence: "Нам нужен столик на ... .",
+            options: ["четверо", "четверых"],
+            correct: "четверых",
+            explanation: "Richtig: четверых. Bei Zeiträumen oder Reservierungen (на) nutzt man im Russischen die Akkusativform, die bei belebten Gruppen wie dem Genitiv aussieht."
+        },
+        {
+            sentence: "Я подошла к ... ребятам.",
+            options: ["двоим", "двоими"],
+            correct: "двоим",
+            explanation: "Richtig: двоим. Die Präposition к (zu) verlangt im Russischen immer den Dativ. Die Endung lautet -им."
+        },
+        {
+            sentence: "Мы работаем с ... начальниками.",
+            options: ["четверых", "четверыми"],
+            correct: "четверыми",
+            explanation: "Richtig: четверыми. Die Präposition с (mit) verlangt den Instrumental. Bei tschetwero lautet die Endung -ыми."
+        },
+        {
+            sentence: "В этой комнате нет ... детей.",
+            options: ["двоих", "двоим"],
+            correct: "двоих",
+            explanation: "Richtig: двоих. Das Wort нет (nicht vorhanden) verlangt im Russischen zwingend den Genitiv."
+        },
+        {
+            sentence: "Я написала письмо ... начальникам.",
+            options: ["четверым", "четверых"],
+            correct: "четверым",
+            explanation: "Richtig: четверым. Die Richtung (wem?) verlangt den Dativ. Die Endung lautet -ым."
+        },
+        {
+            sentence: "Спроси его о ... начальниках.",
+            options: ["четверыми", "четверых"],
+            correct: "четверых",
+            explanation: "Richtig: четверых. Die Präposition о (über jemanden) verlangt den Präpositiv. Die Endung lautet -ых."
+        }
+    ];
+
+    let currentQuestionIndex = 0;
+
+    function loadQuestion() {
+        const question = quizData[currentQuestionIndex];
+        const sentenceArea = document.getElementById('sentence-display');
+        const optionsArea = document.getElementById('options-display');
+        const feedbackArea = document.getElementById('feedback-display');
+        const nextBtn = document.getElementById('next-button');
+        const progressBar = document.getElementById('progress-bar');
+
+        // UI zurücksetzen
+        sentenceArea.innerHTML = question.sentence.replace("...", '<span class="placeholder">...</span>');
+        optionsArea.innerHTML = '';
+        feedbackArea.classList.remove('visible');
+        nextBtn.style.display = 'none';
+        
+        // Fortschrittsbalken aktualisieren
+        const progress = (currentQuestionIndex / quizData.length) * 100;
+        progressBar.style.width = progress + "%";
+
+        // Antwort-Buttons erstellen
+        question.options.forEach(optionText => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.textContent = optionText;
+            btn.onclick = () => evaluateAnswer(btn, optionText);
+            optionsArea.appendChild(btn);
+        });
+    }
+
+    function evaluateAnswer(clickedBtn, selectedText) {
+        const question = quizData[currentQuestionIndex];
+        const allButtons = document.querySelectorAll('.option-btn');
+        const feedbackArea = document.getElementById('feedback-display');
+        const sentenceArea = document.getElementById('sentence-display');
+
+        // Alle Buttons deaktivieren
+        allButtons.forEach(btn => btn.classList.add('disabled'));
+
+        if (selectedText === question.correct) {
+            clickedBtn.classList.add('correct');
+            feedbackArea.style.borderLeft = "5px solid var(--success-color)";
+            sentenceArea.innerHTML = question.sentence.replace("...", '<span style="color: var(--success-color); font-weight: bold;">' + question.correct + '</span>');
+        } else {
+            clickedBtn.classList.add('wrong');
+            feedbackArea.style.borderLeft = "5px solid var(--error-color)";
+            // Richtige Lösung markieren
+            allButtons.forEach(btn => {
+                if (btn.textContent === question.correct) btn.classList.add('correct');
+            });
+        }
+
+        feedbackArea.innerHTML = "<strong>Erklärung:</strong><br>" + question.explanation;
+        feedbackArea.classList.add('visible');
+        document.getElementById('next-button').style.display = 'inline-block';
+    }
+
+    function nextQuestion() {
+        currentQuestionIndex++;
+        if (currentQuestionIndex < quizData.length) {
+            loadQuestion();
+        } else {
+            finishQuiz();
+        }
+    }
+
+    function finishQuiz() {
+        document.getElementById('progress-bar').style.width = "100%";
+        document.getElementById('sentence-display').innerHTML = "<h2>Hervorragend!</h2><p>Du hast alle Sätze richtig bearbeitet.</p>";
+        document.getElementById('options-display').innerHTML = "";
+        document.getElementById('feedback-display').classList.remove('visible');
+        document.getElementById('next-button').textContent = "Neu starten";
+        document.getElementById('next-button').onclick = () => location.reload();
+        document.getElementById('next-button').style.display = "inline-block";
+    }
+
+    // Quiz starten
+    loadQuestion();
+</script>
+
+</body>
+</html>
