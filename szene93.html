@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Restaurant-Szenario: Sammelzahlwörter</title>
+    <style>
+        :root {
+            --waiter-bg: #e9ecef;
+            --user-bg: #cfe2ff;
+            --primary-color: #0056b3;
+            --success-color: #28a745;
+            --error-color: #dc3545;
+            --bg-color: #f4f7f9;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 1.5rem;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .instruction {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            font-size: 0.9rem;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+
+        /* Chat-Design */
+        .chat-box {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .bubble {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 15px;
+            font-size: 1.1rem;
+            line-height: 1.4;
+            position: relative;
+        }
+
+        .waiter {
+            align-self: flex-start;
+            background-color: var(--waiter-bg);
+            border-bottom-left-radius: 2px;
+        }
+
+        .waiter::before {
+            content: "🤵 Kellner";
+            position: absolute;
+            top: -20px;
+            left: 5px;
+            font-size: 0.75rem;
+            color: #666;
+        }
+
+        .user {
+            align-self: flex-end;
+            background-color: var(--user-bg);
+            border-bottom-right-radius: 2px;
+            text-align: right;
+        }
+
+        .user::before {
+            content: "👤 Du";
+            position: absolute;
+            top: -20px;
+            right: 5px;
+            font-size: 0.75rem;
+            color: #666;
+        }
+
+        /* Dropdown / Selection Styling */
+        .select-box {
+            display: inline-block;
+            margin: 0 5px;
+            vertical-align: middle;
+        }
+
+        select {
+            padding: 5px 10px;
+            font-size: 1rem;
+            border: 2px solid var(--primary-color);
+            border-radius: 5px;
+            background: white;
+            cursor: pointer;
+            outline: none;
+        }
+
+        select.correct {
+            border-color: var(--success-color);
+            background-color: #d4edda;
+        }
+
+        select.wrong {
+            border-color: var(--error-color);
+            background-color: #f8d7da;
+        }
+
+        .feedback {
+            text-align: center;
+            font-weight: bold;
+            margin-top: 10px;
+            min-height: 24px;
+        }
+
+        .reset-btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            margin-top: 20px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        @media (max-width: 480px) {
+            .bubble { font-size: 1rem; }
+            h1 { font-size: 1.3rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Im Restaurant</h1>
+    
+    <p class="instruction">
+        Vervollständige den Dialog. Denke daran: Bei Pronomen wie <strong>нас</strong> (uns) nutzt man im Russischen Sammelzahlwörter.
+    </p>
+
+    <div class="chat-box">
+        <!-- Nachricht 1 -->
+        <div class="bubble waiter">
+            Добрый вечер! Сколько вас?
+        </div>
+
+        <!-- Nachricht 2 -->
+        <div class="bubble user">
+            Здравствуйте! Нас 
+            <div class="select-box">
+                <select onchange="checkAnswer(this, 'четверо')">
+                    <option value="">...</option>
+                    <option value="четыре">четыре</option>
+                    <option value="четверо">четверо</option>
+                </select>
+            </div>.
+        </div>
+
+        <!-- Nachricht 3 -->
+        <div class="bubble waiter">
+            Хорошо. Вам нужен столик на 
+            <div class="select-box">
+                <select onchange="checkAnswer(this, 'четверых')">
+                    <option value="">...</option>
+                    <option value="четыре">четыре</option>
+                    <option value="четверых">четверых</option>
+                </select>
+            </div>?
+        </div>
+
+        <!-- Nachricht 4 -->
+        <div class="bubble user">
+            Да, пожалуйста. Мои друзья уже там?
+        </div>
+
+        <!-- Nachricht 5 -->
+        <div class="bubble waiter">
+            Да, 
+            <div class="select-box">
+                <select onchange="checkAnswer(this, 'их трое')">
+                    <option value="">...</option>
+                    <option value="их три">их три</option>
+                    <option value="их трое">их трое</option>
+                </select>
+            </div>
+            уже сидят за тем столом.
+        </div>
+    </div>
+
+    <div id="feedback" class="feedback"></div>
+
+    <button class="reset-btn" onclick="location.reload()">Dialog neu starten</button>
+</div>
+
+<script>
+    let correctCount = 0;
+    const totalQuestions = 3;
+
+    function checkAnswer(selectElement, correctValue) {
+        const val = selectElement.value;
+        const feedback = document.getElementById('feedback');
+
+        if (val === "") {
+            selectElement.className = "";
+            return;
+        }
+
+        if (val === correctValue) {
+            selectElement.className = "correct";
+            selectElement.disabled = true;
+            correctCount++;
+            feedback.textContent = "Правильно! ✅";
+            feedback.style.color = "var(--success-color)";
+        } else {
+            selectElement.className = "wrong";
+            feedback.textContent = "Versuch es nochmal! ❌";
+            feedback.style.color = "var(--error-color)";
+            
+            // Nach 1 Sekunde zurücksetzen für neuen Versuch
+            setTimeout(() => {
+                if (selectElement.className === "wrong") {
+                    selectElement.className = "";
+                    selectElement.value = "";
+                    feedback.textContent = "";
+                }
+            }, 1000);
+        }
+
+        if (correctCount === totalQuestions) {
+            feedback.textContent = "Отлично! Du hast den Dialog perfekt gemeistert. 🎉";
+        }
+    }
+</script>
+
+</body>
+</html>
