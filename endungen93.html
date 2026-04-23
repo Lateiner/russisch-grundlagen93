@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Endungs-Baukasten: Sammelzahlwörter</title>
+    <style>
+        :root {
+            --primary-color: #0056b3;
+            --success-color: #28a745;
+            --error-color: #dc3545;
+            --bg-color: #f8f9fa;
+        }
+
+        /* Verhindert jegliche Kursivschrift */
+        * {
+            font-style: normal !important;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 650px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 1.6rem;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .instruction {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            font-size: 0.95rem;
+            border: 1px solid #ddd;
+            line-height: 1.5;
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            background: #ddd;
+            height: 8px;
+            border-radius: 4px;
+            margin-bottom: 25px;
+            overflow: hidden;
+        }
+
+        #progress-bar {
+            height: 100%;
+            background: var(--primary-color);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .sentence-card {
+            background: white;
+            padding: 40px 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-bottom: 25px;
+            font-size: 1.4rem;
+            min-height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1.6;
+            word-break: break-word;
+        }
+
+        .word-root {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .ending-placeholder {
+            color: var(--primary-color);
+            font-weight: bold;
+            border-bottom: 3px solid var(--primary-color);
+            min-width: 40px;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .ending-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            width: 100%;
+        }
+
+        .ending-btn {
+            background: white;
+            border: 2px solid #dee2e6;
+            border-radius: 10px;
+            padding: 15px 5px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        @media (hover: hover) {
+            .ending-btn:hover:not(.disabled) {
+                border-color: var(--primary-color);
+                background-color: #f0f7ff;
+            }
+        }
+
+        .ending-btn.correct {
+            background-color: var(--success-color);
+            border-color: var(--success-color);
+            color: white;
+        }
+
+        .ending-btn.wrong {
+            background-color: var(--error-color);
+            border-color: var(--error-color);
+            color: white;
+            animation: shake 0.4s ease;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .ending-btn.disabled {
+            pointer-events: none;
+            opacity: 0.6;
+        }
+
+        .feedback-box {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            font-weight: 500;
+            display: none;
+            text-align: left;
+            background-color: #fff;
+            border: 1px solid #ddd;
+        }
+
+        .feedback-box.visible {
+            display: block;
+        }
+
+        .next-btn {
+            margin-top: 20px;
+            padding: 15px 40px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            display: none;
+            font-weight: bold;
+        }
+
+        @media (max-width: 500px) {
+            .ending-grid { grid-template-columns: 1fr 1fr; }
+            .sentence-card { font-size: 1.2rem; }
+            .ending-btn { padding: 12px 5px; font-size: 1.1rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Endungs-Baukasten</h1>
+    
+    <p class="instruction">
+        Wähle die korrekte Endung aus, um das Zahlwort im Satz zu vervollständigen.
+    </p>
+
+    <div class="progress-bar-container">
+        <div id="progress-bar"></div>
+    </div>
+
+    <div class="sentence-card" id="sentence-display">
+        <!-- Satz-Vorschau -->
+    </div>
+
+    <div class="ending-grid" id="ending-options">
+        <button class="ending-btn" onclick="checkEnding(this, '-их')">-их</button>
+        <button class="ending-btn" onclick="checkEnding(this, '-им')">-им</button>
+        <button class="ending-btn" onclick="checkEnding(this, '-ими')">-ими</button>
+        <button class="ending-btn" onclick="checkEnding(this, '-ых')">-ых</button>
+        <button class="ending-btn" onclick="checkEnding(this, '-ым')">-ым</button>
+        <button class="ending-btn" onclick="checkEnding(this, '-ыми')">-ыми</button>
+    </div>
+
+    <div id="feedback-display" class="feedback-box"></div>
+
+    <button class="next-btn" id="next-button" onclick="nextQuestion()">Nächster Satz</button>
+</div>
+
+<script>
+    const questions = [
+        {
+            sentenceBefore: "Он пришёл mit дв",
+            sentenceAfter: " котятами.",
+            root: "дво",
+            correctEnding: "-ими",
+            explanation: "Richtig: двоими. Das Wort двое gehört zur Gruppe 1 (Endungen mit -и). Da 'mit' (с) den Instrumental verlangt, ist -ими korrekt."
+        },
+        {
+            sentenceBefore: "Я подошёл zu четв",
+            sentenceAfter: " ребятам.",
+            root: "четвер",
+            correctEnding: "-ым",
+            explanation: "Richtig: четверым. Das Wort четверо gehört zur Gruppe 2 (Endungen mit -ы). 'Zu' (к) verlangt den Dativ, also -ым."
+        },
+        {
+            sentenceBefore: "Мы не видим пят",
+            sentenceAfter: " знакомых.",
+            root: "пятер",
+            correctEnding: "-ых",
+            explanation: "Richtig: пятерых. Bei Gruppe 2 (пятеро) nutzen wir im Akkusativ/Genitiv die Endung -ых."
+        },
+        {
+            sentenceBefore: "Она мечтает о тр",
+            sentenceAfter: " детях.",
+            root: "тро",
+            correctEnding: "-их",
+            explanation: "Richtig: троих. Das Wort трое gehört zur Gruppe 1. Nach 'über' (о) folgt der Präpositiv mit der Endung -их."
+        },
+        {
+            sentenceBefore: "Они гордятся семер",
+            sentenceAfter: " учениками.",
+            root: "семер",
+            correctEnding: "-ыmi", // Hier war ein kleiner interner Fehler im Text-Template, korrigiert zu "-ыми"
+            correctEnding: "-ыми",
+            explanation: "Richtig: семерыми. Gruppe 2 (семеро) nutzt im Instrumental die Endung -ыми."
+        },
+        {
+            sentenceBefore: "Мы помогли дв",
+            sentenceAfter: " друзьям.",
+            root: "дво",
+            correctEnding: "-им",
+            explanation: "Richtig: двоим. Dativ-Endung der Gruppe 1 ist -им."
+        },
+        {
+            sentenceBefore: "В списке нет шестер",
+            sentenceAfter: " человек.",
+            root: "шестер",
+            correctEnding: "-ых",
+            explanation: "Richtig: шестерых. Genitiv-Endung der Gruppe 2 ist -ых."
+        },
+        {
+            sentenceBefore: "Я говорю о дв",
+            sentenceAfter: " книгах... Moment, двое geht nicht bei Büchern! Aber hier: о дв",
+            sentenceAfter: " друзьях.",
+            root: "дво",
+            correctEnding: "-их",
+            explanation: "Richtig: двоich. Präpositiv der Gruppe 1 ist -их."
+        }
+    ];
+
+    let currentIdx = 0;
+
+    function loadQuestion() {
+        const q = questions[currentIdx];
+        const sentenceArea = document.getElementById('sentence-display');
+        const feedbackArea = document.getElementById('feedback-display');
+        const nextBtn = document.getElementById('next-button');
+        const progressBar = document.getElementById('progress-bar');
+        const buttons = document.querySelectorAll('.ending-btn');
+
+        sentenceArea.innerHTML = `${q.sentenceBefore.split(' ')[0]} ${q.sentenceBefore.split(' ')[1]} <span class="word-root">${q.root}</span><span class="ending-placeholder" id="placeholder">...</span>${q.sentenceAfter}`;
+        
+        feedbackArea.classList.remove('visible');
+        nextBtn.style.display = 'none';
+        
+        buttons.forEach(btn => {
+            btn.className = 'ending-btn';
+        });
+
+        const progress = (currentIdx / questions.length) * 100;
+        progressBar.style.width = progress + "%";
+    }
+
+    function checkEnding(clickedBtn, selectedEnding) {
+        const q = questions[currentIdx];
+        const placeholder = document.getElementById('placeholder');
+        const feedbackArea = document.getElementById('feedback-display');
+        const nextBtn = document.getElementById('next-button');
+        const buttons = document.querySelectorAll('.ending-btn');
+
+        if (selectedEnding === q.correctEnding) {
+            clickedBtn.classList.add('correct');
+            placeholder.textContent = selectedEnding.replace('-', '');
+            placeholder.style.color = "var(--success-color)";
+            feedbackArea.innerHTML = "<strong>Korrekt!</strong><br>" + q.explanation;
+            feedbackArea.classList.add('visible');
+            nextBtn.style.display = 'inline-block';
+            buttons.forEach(btn => btn.classList.add('disabled'));
+        } else {
+            clickedBtn.classList.add('wrong');
+            setTimeout(() => {
+                clickedBtn.classList.remove('wrong');
+            }, 800);
+        }
+    }
+
+    function nextQuestion() {
+        currentIdx++;
+        if (currentIdx < questions.length) {
+            loadQuestion();
+        } else {
+            finishGame();
+        }
+    }
+
+    function finishGame() {
+        document.getElementById('progress-bar').style.width = "100%";
+        document.getElementById('sentence-display').innerHTML = "<h2>Hervorragend!</h2><p>Du hast alle Endungen im Baukasten richtig zusammengesetzt.</p>";
+        document.getElementById('ending-options').style.display = "none";
+        document.getElementById('feedback-display').classList.remove('visible');
+        document.getElementById('next-button').textContent = "Neu starten";
+        document.getElementById('next-button').onclick = () => location.reload();
+        document.getElementById('next-button').style.display = "inline-block";
+    }
+
+    loadQuestion();
+</script>
+
+</body>
+</html>
