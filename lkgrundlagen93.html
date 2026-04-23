@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vokabeltrainer: Russisch - Sammelzahlwörter</title>
+    <style>
+        :root {
+            --primary-green: #2e7d32;
+            --light-green: #e8f5e9;
+            --accent-green: #4caf50;
+            --dark-green: #1b5e20;
+            --text-color: #333;
+            --bg-color: #f1f8e9;
+            --card-shadow: 0 8px 16px rgba(0,0,0,0.15);
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
+        }
+
+        h1 {
+            color: var(--dark-green);
+            margin-bottom: 10px;
+            font-size: 1.5rem;
+        }
+
+        .progress {
+            margin-bottom: 20px;
+            font-weight: bold;
+            color: var(--primary-green);
+            background: var(--light-green);
+            padding: 5px 15px;
+            border-radius: 20px;
+            display: inline-block;
+        }
+
+        /* Flashcard 3D Flip Design */
+        .card-container {
+            perspective: 1000px;
+            width: 100%;
+            height: 300px;
+            cursor: pointer;
+            margin-bottom: 30px;
+        }
+
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-style: preserve-3d;
+        }
+
+        .card-container.is-flipped .card-inner {
+            transform: rotateY(180deg);
+        }
+
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: white;
+            border-radius: 15px;
+            box-shadow: var(--card-shadow);
+            padding: 30px;
+            border: 2px solid var(--accent-green);
+        }
+
+        .card-back {
+            transform: rotateY(180deg);
+            background-color: var(--light-green);
+        }
+
+        .card-content {
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            width: 100%;
+            line-height: 1.4;
+        }
+
+        .label {
+            position: absolute;
+            top: 15px;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--primary-green);
+            opacity: 0.7;
+        }
+
+        /* Controls */
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .nav-buttons {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        button {
+            background-color: var(--primary-green);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+        }
+
+        button:hover {
+            background-color: var(--dark-green);
+        }
+
+        button:active {
+            transform: translateY(2px);
+        }
+
+        .secondary-controls {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+        }
+
+        .btn-shuffle { background-color: #558b2f; }
+        .btn-home { background-color: #795548; }
+
+        .hint {
+            margin-top: 20px;
+            font-size: 0.85rem;
+            color: #666;
+            line-height: 1.5;
+        }
+
+        /* Animation for shuffle */
+        @keyframes shuffleEffect {
+            0% { transform: scale(1); }
+            50% { transform: scale(0.95) rotate(2deg); }
+            100% { transform: scale(1); }
+        }
+
+        .shuffling {
+            animation: shuffleEffect 0.4s ease-in-out;
+        }
+
+        @media (max-width: 480px) {
+            .card-container { height: 250px; }
+            h1 { font-size: 1.2rem; }
+            button { padding: 10px 12px; font-size: 0.9rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Lernkartei: Sammelzahlwörter</h1>
+    
+    <div class="progress" id="progress">1 / 80</div>
+
+    <div class="card-container" id="cardContainer" onclick="toggleFlip()">
+        <div class="card-inner">
+            <div class="card-front">
+                <span class="label">Russisch</span>
+                <div class="card-content" id="frontText">Загрузка...</div>
+            </div>
+            <div class="card-back">
+                <span class="label">Deutsch</span>
+                <div class="card-content" id="backText">Loading...</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="nav-buttons">
+        <button onclick="prevCard(event)">← Vorherige</button>
+        <button onclick="nextCard(event)">Nächste →</button>
+    </div>
+
+    <div class="secondary-controls">
+        <button class="btn-shuffle" onclick="shuffleCards(event)">🔀 Mischen</button>
+        <button class="btn-home" onclick="goHome(event)">🏠 An den Anfang</button>
+    </div>
+
+    <div class="hint">
+        Tippe die Karte oder nutze <b>Leertaste/Enter</b> zum Wenden.<br>
+        Nutze die <b>Pfeiltasten (← →)</b> zum Navigieren.
+    </div>
+</div>
+
+<script>
+    const vocabulary = [
+        ["урóк", "Lektion / Unterrichtsstunde"],
+        ["числи́тельное", "Zahlwort"],
+        ["собирáтельное числи́тельное", "Sammelzahlwort"],
+        ["коли́чественное числи́тельное", "Kardinalzahl"],
+        ["двóе", "zwei (Sammelzahlwort)"],
+        ["трóе", "drei (Sammelzahlwort)"],
+        ["чéтверо", "vier (Sammelzahlwort)"],
+        ["пя́теро", "fünf (Sammelzahlwort)"],
+        ["шéстеро", "sechs (Sammelzahlwort)"],
+        ["сéмеро", "sieben (Sammelzahlwort)"],
+        ["вóсьмеро", "acht (Sammelzahlwort)"],
+        ["дéвятеро", "neun (Sammelzahlwort)"],
+        ["де́сятеро", "zehn (Sammelzahlwort)"],
+        ["двá / две́", "zwei (Kardinalzahl männlich / weiblich)"],
+        ["три́", "drei (Kardinalzahl)"],
+        ["четы́ре", "vier (Kardinalzahl)"],
+        ["склонéние", "Deklination"],
+        ["склоня́ть / просклоня́ть", "deklinieren"],
+        ["паде́ж", "Fall / Kasus"],
+        ["роди́тельный паде́ж", "Genitiv"],
+        ["да́тельный паде́ж", "Dativ"],
+        ["вини́тельный паде́ж", "Akkusativ"],
+        ["твори́тельный паде́ж", "Instrumental"],
+        ["предлóжный паде́ж", "Präpositiv"],
+        ["род", "Geschlecht / Genus"],
+        ["мужскóй род", "männliches Geschlecht"],
+        ["жéнский род", "weibliches Geschlecht"],
+        ["срéдний род", "sächliches Geschlecht"],
+        ["число́", "Zahl / Numerus"],
+        ["еди́нственное число́", "Einzahl / Singular"],
+        ["мнóжественное число́", "Mehrzahl / Plural"],
+        ["одушевлённый", "belebt"],
+        ["неодушевлённый", "unbelebt"],
+        ["говори́ть / сказáть", "sprechen / sagen"],
+        ["расскáзывать / рассказáть", "erzählen"],
+        ["испóльзовать / воспóльзоваться", "verwenden / benutzen"],
+        ["слы́шать / услы́шать", "hören"],
+        ["узнавáть / узнáть", "erfahren / erkennen"],
+        ["продолжáть / продóлжить", "fortfahren / weitermachen"],
+        ["смотрéть / посмотрéть", "schauen / ansehen"],
+        ["читáть / прочитáть", "lesen"],
+        ["стáвить / постáвить", "stellen / setzen"],
+        ["обращáть / обрати́ть", "richten / wenden (z. B. Aufmerksamkeit)"],
+        ["понимáть / поня́ть", "verstehen"],
+        ["учи́ть / вы́учить", "lernen"],
+        ["исправля́ть / испрáвить", "korrigieren"],
+        ["находи́ть / найти́", "finden"],
+        ["подгóтавливать / подготóвить", "vorbereiten"],
+        ["изменя́ть / измени́ть", "verändern"],
+        ["брáть / взя́ть", "nehmen"],
+        ["идти́ / пойти́", "gehen"],
+        ["приходи́ть / прийти́", "kommen"],
+        ["пи́сать / напи́сать", "schreiben"],
+        ["спрáшивать / спроси́ть", "fragen"],
+        ["дéти", "Kinder"],
+        ["лю́ди", "Menschen"],
+        ["ребя́та", "Jungs / Leute"],
+        ["су́тки", "Zeitraum von 24 Stunden"],
+        ["нóжницы", "Schere"],
+        ["брю́ки", "Hose"],
+        ["очки́", "Brille"],
+        ["ворóта", "Tor"],
+        ["сáни", "Schlitten"],
+        ["перчáтки", "Handschuhe"],
+        ["носки́", "Socken"],
+        ["котя́та", "Kätzchen"],
+        ["щеня́та", "Welpen"],
+        ["студéнт / студéнтка", "Student / Studentin"],
+        ["я́блоко", "Apfel"],
+        ["стýл", "Stuhl"],
+        ["здáние", "Gebäude"],
+        ["друг / подру́га", "Freund / Freundin"],
+        ["местоимéние", "Pronomen"],
+        ["прáвило", "Regel"],
+        ["упражнéние", "Übung"],
+        ["оши́бка", "Fehler"],
+        ["отвéт", "Antwort"],
+        ["предложéние", "Satz"],
+        ["вариáнт", "Variante"],
+        ["ударе́ние", "Betonung"]
+    ];
+
+    let currentCards = [...vocabulary];
+    let currentIndex = 0;
+    let isFlipped = false;
+
+    const cardContainer = document.getElementById('cardContainer');
+    const frontText = document.getElementById('frontText');
+    const backText = document.getElementById('backText');
+    const progress = document.getElementById('progress');
+
+    function updateDisplay() {
+        const currentPair = currentCards[currentIndex];
+        
+        // Reset flip state visually
+        cardContainer.classList.remove('is-flipped');
+        isFlipped = false;
+
+        // Set Text
+        frontText.textContent = currentPair[0];
+        backText.textContent = currentPair[1];
+
+        // Dynamic Font Size
+        adjustFontSize(frontText, currentPair[0]);
+        adjustFontSize(backText, currentPair[1]);
+
+        // Progress
+        progress.textContent = `${currentIndex + 1} / ${currentCards.length}`;
+    }
+
+    function adjustFontSize(element, text) {
+        if (text.length > 40) {
+            element.style.fontSize = "1rem";
+        } else if (text.length > 20) {
+            element.style.fontSize = "1.2rem";
+        } else {
+            element.style.fontSize = "1.8rem";
+        }
+    }
+
+    function toggleFlip() {
+        isFlipped = !isFlipped;
+        cardContainer.classList.toggle('is-flipped', isFlipped);
+    }
+
+    function nextCard(event) {
+        if (event) event.stopPropagation();
+        if (currentIndex < currentCards.length - 1) {
+            currentIndex++;
+            updateDisplay();
+        }
+    }
+
+    function prevCard(event) {
+        if (event) event.stopPropagation();
+        if (currentIndex > 0) {
+            currentIndex--;
+            updateDisplay();
+        }
+    }
+
+    function shuffleCards(event) {
+        if (event) event.stopPropagation();
+        cardContainer.classList.add('shuffling');
+        
+        // Fisher-Yates Shuffle
+        for (let i = currentCards.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [currentCards[i], currentCards[j]] = [currentCards[j], currentCards[i]];
+        }
+        
+        currentIndex = 0;
+        setTimeout(() => {
+            updateDisplay();
+            cardContainer.classList.remove('shuffling');
+        }, 200);
+    }
+
+    function goHome(event) {
+        if (event) event.stopPropagation();
+        currentIndex = 0;
+        updateDisplay();
+    }
+
+    // Keyboard Controls
+    window.addEventListener('keydown', (e) => {
+        switch(e.key) {
+            case ' ':
+            case 'Enter':
+                e.preventDefault();
+                toggleFlip();
+                break;
+            case 'ArrowRight':
+                nextCard();
+                break;
+            case 'ArrowLeft':
+                prevCard();
+                break;
+            case 'Home':
+                goHome();
+                break;
+        }
+    });
+
+    // Initialize
+    updateDisplay();
+</script>
+
+</body>
+</html>
