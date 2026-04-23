@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Die Kinder & Leute Regel</title>
+    <style>
+        :root {
+            --primary-color: #0056b3;
+            --success-color: #28a745;
+            --error-color: #dc3545;
+            --bg-color: #f0f2f5;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
+        }
+
+        h1 { font-size: 1.5rem; color: #333; margin-bottom: 20px; }
+
+        .progress-container {
+            width: 100%;
+            background: #ddd;
+            height: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        #progress-bar {
+            height: 100%;
+            background: var(--primary-color);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .sentence-card {
+            background: white;
+            padding: 40px 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-bottom: 25px;
+            font-size: 1.4rem;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1.5;
+        }
+
+        .placeholder {
+            border-bottom: 2px dashed var(--primary-color);
+            color: var(--primary-color);
+            padding: 0 10px;
+            font-weight: bold;
+        }
+
+        .options-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .option-tile {
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 12px;
+            padding: 20px 10px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        @media (hover: hover) {
+            .option-tile:hover:not(.disabled) {
+                border-color: var(--primary-color);
+                background-color: #f0f7ff;
+            }
+        }
+
+        .option-tile.correct {
+            background-color: var(--success-color);
+            border-color: var(--success-color);
+            color: white;
+        }
+
+        .option-tile.wrong {
+            background-color: var(--error-color);
+            border-color: var(--error-color);
+            color: white;
+            animation: shake 0.4s ease;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .option-tile.disabled {
+            pointer-events: none;
+            opacity: 0.6;
+        }
+
+        .feedback-text {
+            margin-top: 20px;
+            font-weight: bold;
+            min-height: 24px;
+            font-size: 1rem;
+        }
+
+        .next-btn {
+            margin-top: 20px;
+            padding: 12px 30px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            display: none;
+        }
+
+        @media (max-width: 480px) {
+            .options-container { grid-template-columns: 1fr; }
+            .sentence-card { font-size: 1.2rem; padding: 30px 15px; }
+            h1 { font-size: 1.3rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Kinder, Menschen & Leute</h1>
+    
+    <div class="progress-container">
+        <div id="progress-bar"></div>
+    </div>
+
+    <div class="sentence-card" id="sentence">
+        <!-- Satz mit Platzhalter -->
+    </div>
+
+    <div class="options-container" id="options">
+        <!-- Auswahl-Kacheln -->
+    </div>
+
+    <div id="feedback" class="feedback-text"></div>
+
+    <button class="next-btn" id="next-btn" onclick="nextQuestion()">Nächster Satz</button>
+</div>
+
+<script>
+    const questions = [
+        {
+            start: "У моей тёти ",
+            end: ".",
+            correct: "трое детей",
+            wrong: "три детей",
+            rule: "Bei 'дети' verwendet man das Sammelzahlwort."
+        },
+        {
+            start: "Вчера на вечеринке было ",
+            end: ".",
+            correct: "четверо людей",
+            wrong: "четыре людей",
+            rule: "Bei 'люди' im Plural ist das Sammelzahlwort korrekt."
+        },
+        {
+            start: "Во дворе играют ",
+            end: ".",
+            correct: "пятеро ребят",
+            wrong: "пять ребят",
+            rule: "Das Wort 'ребята' verlangt ein Sammelzahlwort."
+        },
+        {
+            start: "В очереди стояло ",
+            end: ".",
+            correct: "семеро людей",
+            wrong: "семь людей",
+            rule: "Menschenmengen zählt man oft mit Sammelzahlwörtern."
+        },
+        {
+            start: "У соседа ",
+            end: ".",
+            correct: "двое детей",
+            wrong: "два детей",
+            rule: "Man sagt niemals 'два детей', nur 'двое детей'."
+        },
+        {
+            start: "В классе сидело ",
+            end: ".",
+            correct: "десятеро ребят",
+            wrong: "десять ребят",
+            rule: "Auch bei großen Gruppen von 'ребята' ist das Sammelzahlwort üblich."
+        },
+        {
+            start: "На остановке было всего ",
+            end: ".",
+            correct: "трое людей",
+            wrong: "три людей",
+            rule: "Sammelzahlwörter klingen natürlicher bei 'люди'."
+        },
+        {
+            start: "У них уже ",
+            end: ".",
+            correct: "четверо детей",
+            wrong: "четыре детей",
+            rule: "Die Anzahl der Kinder wird stets so ausgedrückt."
+        }
+    ];
+
+    let currentIdx = 0;
+
+    function initGame() {
+        showQuestion();
+    }
+
+    function showQuestion() {
+        const q = questions[currentIdx];
+        const sentenceEl = document.getElementById('sentence');
+        const optionsEl = document.getElementById('options');
+        const feedbackEl = document.getElementById('feedback');
+        const nextBtn = document.getElementById('next-btn');
+        const progressBar = document.getElementById('progress-bar');
+
+        sentenceEl.innerHTML = `${q.start} <span class="placeholder">...</span> ${q.end}`;
+        optionsEl.innerHTML = '';
+        feedbackEl.textContent = '';
+        nextBtn.style.display = 'none';
+        progressBar.style.width = `${(currentIdx / questions.length) * 100}%`;
+
+        // Optionen mischen
+        const opts = [q.correct, q.wrong].sort(() => Math.random() - 0.5);
+
+        opts.forEach(text => {
+            const tile = document.createElement('div');
+            tile.className = 'option-tile';
+            tile.textContent = text;
+            tile.onclick = () => checkAnswer(tile, text === q.correct);
+            optionsEl.appendChild(tile);
+        });
+    }
+
+    function checkAnswer(selectedTile, isCorrect) {
+        const q = questions[currentIdx];
+        const tiles = document.querySelectorAll('.option-tile');
+        const feedbackEl = document.getElementById('feedback');
+        const nextBtn = document.getElementById('next-btn');
+        const sentenceEl = document.getElementById('sentence');
+
+        tiles.forEach(t => t.classList.add('disabled'));
+
+        if (isCorrect) {
+            selectedTile.classList.add('correct');
+            feedbackEl.textContent = "Правильно! " + q.rule;
+            feedbackEl.style.color = "var(--success-color)";
+            sentenceEl.innerHTML = `${q.start} <span style="color: var(--success-color); font-weight: bold;">${q.correct}</span> ${q.end}`;
+        } else {
+            selectedTile.classList.add('wrong');
+            feedbackEl.textContent = "Leider falsch. " + q.rule;
+            feedbackEl.style.color = "var(--error-color)";
+            // Richtige Kachel markieren
+            tiles.forEach(t => {
+                if (t.textContent === q.correct) t.classList.add('correct');
+            });
+        }
+
+        nextBtn.style.display = 'inline-block';
+    }
+
+    function nextQuestion() {
+        currentIdx++;
+        if (currentIdx < questions.length) {
+            showQuestion();
+        } else {
+            showFinal();
+        }
+    }
+
+    function showFinal() {
+        document.getElementById('progress-bar').style.width = "100%";
+        document.getElementById('sentence').innerHTML = "<h2>Отлично!</h2>";
+        document.getElementById('options').innerHTML = "";
+        document.getElementById('feedback').textContent = "Du hast die Regeln für Kinder, Leute und Menschen gelernt.";
+        document.getElementById('next-btn').textContent = "Neu starten";
+        document.getElementById('next-btn').onclick = () => location.reload();
+    }
+
+    initGame();
+</script>
+
+</body>
+</html>
