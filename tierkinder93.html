@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tierkinder-Lotto</title>
+    <style>
+        :root {
+            --primary-color: #0056b3;
+            --success-color: #28a745;
+            --error-color: #dc3545;
+            --bg-color: #f8f9fa;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 700px;
+            text-align: center;
+        }
+
+        h1 { font-size: 1.5rem; color: #333; margin-bottom: 10px; }
+
+        .instruction {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            font-size: 0.95rem;
+            border: 1px solid #ddd;
+        }
+
+        .lotto-board {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .lotto-tile {
+            background: white;
+            border: 2px solid #dee2e6;
+            border-radius: 12px;
+            padding: 20px 10px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .lotto-tile .animal-icon {
+            font-size: 1.5rem;
+        }
+
+        @media (hover: hover) {
+            .lotto-tile:hover:not(.correct):not(.is-over) {
+                border-color: var(--primary-color);
+                transform: scale(1.02);
+            }
+        }
+
+        .lotto-tile.correct {
+            background-color: var(--success-color);
+            border-color: var(--success-color);
+            color: white;
+            cursor: default;
+        }
+
+        .lotto-tile.wrong {
+            background-color: var(--error-color);
+            border-color: var(--error-color);
+            color: white;
+            animation: shake 0.4s ease;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .status-msg {
+            margin-top: 10px;
+            font-weight: bold;
+            min-height: 24px;
+            font-size: 1.1rem;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1rem;
+        }
+
+        .solution-btn { background-color: #ffc107; color: #212529; }
+        .reset-btn { background-color: #6c757d; color: white; }
+
+        @media (max-width: 480px) {
+            .lotto-board { grid-template-columns: 1fr 1fr; }
+            .lotto-tile { font-size: 0.95rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Tierkinder-Lotto</h1>
+    
+    <p class="instruction">
+        Erinnere dich: Bei Tierjungen darf man oft sowohl Sammel- als auch Kardinalzahlen verwenden. <br>
+        <strong>Aufgabe:</strong> Klicke auf alle <strong>korrekten</strong> Möglichkeiten!
+    </p>
+
+    <div class="lotto-board" id="lottoBoard">
+        <!-- Fliesen werden hier eingefügt -->
+    </div>
+
+    <div id="status-msg" class="status-msg"></div>
+
+    <div class="controls">
+        <button class="solution-btn" onclick="showSolution()">Lösung</button>
+        <button class="reset-btn" onclick="initGame()">Neu starten</button>
+    </div>
+</div>
+
+<script>
+    const options = [
+        // 5 Welpen (Puppies)
+        { text: "пять щенков", correct: true, icon: "🐶" },
+        { text: "пятеро щенят", correct: true, icon: "🐶" },
+        { text: "пять щенят", correct: true, icon: "🐶" },
+        { text: "пятеро щенков", correct: false, icon: "🐶" },
+        
+        // 2 Kätzchen (Kittens)
+        { text: "два котёнка", correct: true, icon: "🐱" },
+        { text: "двое котят", correct: true, icon: "🐱" },
+        { text: "два котята", correct: false, icon: "🐱" },
+        { text: "двое котёнка", correct: false, icon: "🐱" },
+
+        // 3 Füllen (Foals)
+        { text: "трое жеребят", correct: true, icon: "🐴" },
+        { text: "три жеребёнка", correct: true, icon: "🐴" },
+        { text: "три жеребята", correct: false, icon: "🐴" },
+        { text: "трое жеребёнок", correct: false, icon: "🐴" }
+    ];
+
+    let foundCount = 0;
+    let totalCorrect = options.filter(o => o.correct).length;
+    let isGameOver = false;
+
+    function shuffle(array) {
+        return array.sort(() => Math.random() - 0.5);
+    }
+
+    function initGame() {
+        const board = document.getElementById('lottoBoard');
+        const msg = document.getElementById('status-msg');
+        board.innerHTML = '';
+        msg.textContent = '';
+        foundCount = 0;
+        isGameOver = false;
+
+        shuffle([...options]).forEach(opt => {
+            const tile = document.createElement('div');
+            tile.className = 'lotto-tile';
+            tile.innerHTML = `<span class="animal-icon">${opt.icon}</span><span>${opt.text}</span>`;
+            tile.dataset.correct = opt.correct;
+            
+            tile.onclick = () => handleSelection(tile);
+            board.appendChild(tile);
+        });
+    }
+
+    function handleSelection(tile) {
+        if (isGameOver || tile.classList.contains('correct')) return;
+
+        const isCorrect = tile.dataset.correct === "true";
+
+        if (isCorrect) {
+            tile.classList.add('correct');
+            foundCount++;
+            checkWin();
+        } else {
+            tile.classList.add('wrong');
+            setTimeout(() => tile.classList.remove('wrong'), 800);
+        }
+    }
+
+    function checkWin() {
+        const msg = document.getElementById('status-msg');
+        if (foundCount === totalCorrect) {
+            msg.textContent = "Отлично! Du hast alle korrekten Varianten gefunden.";
+            msg.style.color = "var(--success-color)";
+            isGameOver = true;
+        } else {
+            msg.textContent = `Gefunden: ${foundCount} von ${totalCorrect}`;
+            msg.style.color = "#333";
+        }
+    }
+
+    function showSolution() {
+        if (isGameOver) return;
+        const tiles = document.querySelectorAll('.lotto-tile');
+        tiles.forEach(tile => {
+            if (tile.dataset.correct === "true") {
+                tile.classList.add('correct');
+            }
+        });
+        isGameOver = true;
+        document.getElementById('status-msg').textContent = "Das sind alle richtigen Formen.";
+    }
+
+    initGame();
+</script>
+
+</body>
+</html>
