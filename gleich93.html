@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bedeutungs-Gleichheit: Sammelzahlwörter</title>
+    <style>
+        :root {
+            --primary-color: #0056b3;
+            --success-color: #28a745;
+            --error-color: #dc3545;
+            --warning-color: #ffc107;
+            --bg-color: #f4f7f9;
+        }
+
+        /* Verhindert Kursivschrift im gesamten Dokument */
+        * {
+            font-style: normal !important;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 1.6rem;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .instruction {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            font-size: 0.95rem;
+            border: 1px solid #ddd;
+            line-height: 1.5;
+        }
+
+        .game-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+            margin-bottom: 30px;
+        }
+
+        .tile {
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            padding: 20px 10px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.5s ease; /* Ermöglicht langsames Verschwinden */
+            user-select: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 65px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            font-weight: 500;
+            opacity: 1;
+        }
+
+        @media (hover: hover) {
+            .tile:hover:not(.completed):not(.fade-out) {
+                border-color: var(--primary-color);
+                background-color: #f0f7ff;
+            }
+        }
+
+        .tile.selected {
+            border-color: var(--primary-color);
+            background-color: #cfe2ff;
+            transform: scale(1.03);
+        }
+
+        .tile.completed {
+            background-color: var(--success-color);
+            border-color: var(--success-color);
+            color: white;
+        }
+
+        .tile.fade-out {
+            opacity: 0;
+            transform: scale(0.8);
+            pointer-events: none;
+        }
+
+        .tile.error {
+            background-color: var(--error-color);
+            border-color: var(--error-color);
+            color: white;
+            animation: shake 0.4s ease;
+        }
+
+        /* Lösungsfarben für Paare */
+        .sol-pair-1 { background-color: #ffadad !important; color: #000 !important; border-color: #ff4d4d !important; opacity: 1 !important; transform: scale(1) !important; }
+        .sol-pair-2 { background-color: #ffd6a5 !important; color: #000 !important; border-color: #ff9f1c !important; opacity: 1 !important; transform: scale(1) !important; }
+        .sol-pair-3 { background-color: #fdffb6 !important; color: #000 !important; border-color: #e9ed00 !important; opacity: 1 !important; transform: scale(1) !important; }
+        .sol-pair-4 { background-color: #caffbf !important; color: #000 !important; border-color: #4ade80 !important; opacity: 1 !important; transform: scale(1) !important; }
+        .sol-pair-5 { background-color: #9bf6ff !important; color: #000 !important; border-color: #00d2ff !important; opacity: 1 !important; transform: scale(1) !important; }
+        .sol-pair-6 { background-color: #bdb2ff !important; color: #000 !important; border-color: #7209b7 !important; opacity: 1 !important; transform: scale(1) !important; }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .status-msg {
+            font-weight: bold;
+            margin-bottom: 20px;
+            height: 24px;
+            font-size: 1.1rem;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        button {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1rem;
+        }
+
+        .solution-btn { background-color: var(--warning-color); color: #333; }
+        .reset-btn { background-color: #6c757d; color: white; }
+
+        @media (max-width: 480px) {
+            .game-grid { grid-template-columns: 1fr 1fr; }
+            .tile { font-size: 0.95rem; padding: 15px 5px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Bedeutungs-Gleichheit</h1>
+    
+    <p class="instruction">
+        Finde die Paare, die dasselbe bedeuten. Korrekt gefundene Paare verschwinden langsam. <br>
+        <strong>Anleitung:</strong> Klicke nacheinander zwei Kacheln an.
+    </p>
+
+    <div id="status-msg" class="status-msg"></div>
+
+    <div class="game-grid" id="gameGrid">
+        <!-- Kacheln werden per JS eingefügt -->
+    </div>
+
+    <div class="controls">
+        <button class="solution-btn" onclick="solveGame()">Lösung</button>
+        <button class="reset-btn" onclick="initGame()">Neu starten</button>
+    </div>
+</div>
+
+<script>
+    // 6 Paare (12 Kacheln)
+    const activePairs = [
+        { id: 1, a: "два студента", b: "двое студентов" },
+        { id: 2, a: "три котёнка", b: "трое котят" },
+        { id: 3, a: "две перчатки", b: "двое перчаток" },
+        { id: 4, a: "пять щенков", b: "пятеро щенят" },
+        { id: 5, a: "три друга", b: "трое друзей" },
+        { id: 6, a: "две пары брюк", b: "двое брюк" }
+    ];
+
+    let tilesData = [];
+    let firstTile = null;
+    let lockBoard = false;
+    let matchesFound = 0;
+
+    function initGame() {
+        const grid = document.getElementById('gameGrid');
+        const status = document.getElementById('status-msg');
+        grid.innerHTML = '';
+        status.textContent = '';
+        tilesData = [];
+        firstTile = null;
+        lockBoard = false;
+        matchesFound = 0;
+
+        // Daten vorbereiten
+        activePairs.forEach(p => {
+            tilesData.push({ id: p.id, text: p.a });
+            tilesData.push({ id: p.id, text: p.b });
+        });
+
+        // Mischen
+        tilesData.sort(() => Math.random() - 0.5);
+
+        // Kacheln erstellen
+        tilesData.forEach(data => {
+            const tile = document.createElement('div');
+            tile.className = 'tile';
+            tile.textContent = data.text;
+            tile.dataset.id = data.id;
+            tile.onclick = () => handleTileClick(tile);
+            grid.appendChild(tile);
+        });
+    }
+
+    function handleTileClick(tile) {
+        if (lockBoard || tile === firstTile || tile.classList.contains('completed') || tile.classList.contains('fade-out')) return;
+
+        tile.classList.add('selected');
+
+        if (!firstTile) {
+            firstTile = tile;
+            return;
+        }
+
+        if (firstTile.dataset.id === tile.dataset.id) {
+            // Erfolg
+            const t1 = firstTile;
+            const t2 = tile;
+            
+            t1.classList.replace('selected', 'completed');
+            t2.classList.replace('selected', 'completed');
+            
+            lockBoard = true;
+            matchesFound++;
+
+            // Erst grün zeigen, dann langsam ausblenden
+            setTimeout(() => {
+                t1.classList.add('fade-out');
+                t2.classList.add('fade-out');
+                lockBoard = false;
+                checkWin();
+            }, 700);
+
+            firstTile = null;
+        } else {
+            // Fehler
+            lockBoard = true;
+            tile.classList.add('error');
+            firstTile.classList.add('error');
+
+            setTimeout(() => {
+                tile.classList.remove('selected', 'error');
+                firstTile.classList.remove('selected', 'error');
+                firstTile = null;
+                lockBoard = false;
+            }, 800);
+        }
+    }
+
+    function checkWin() {
+        if (matchesFound === activePairs.length) {
+            const status = document.getElementById('status-msg');
+            status.textContent = "Отлично! Alle Paare wurden gefunden.";
+            status.style.color = "var(--success-color)";
+        }
+    }
+
+    function solveGame() {
+        const tiles = document.querySelectorAll('.tile');
+        const status = document.getElementById('status-msg');
+        
+        tiles.forEach(tile => {
+            // Alle Statusklassen entfernen
+            tile.classList.remove('selected', 'error', 'completed', 'fade-out');
+            
+            // Paarspezifische Farbe zuweisen
+            const pairId = tile.dataset.id;
+            tile.classList.add('sol-pair-' + pairId);
+        });
+        
+        status.textContent = "Lösung: Paare mit gleichen Farben bedeuten dasselbe.";
+        status.style.color = "#333";
+        lockBoard = true;
+    }
+
+    initGame();
+</script>
+
+</body>
+</html>
